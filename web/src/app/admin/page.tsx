@@ -84,6 +84,9 @@ export default async function AdminPage() {
           <a href="/dashboard" className="btn btn-secondary">
             ダッシュボード
           </a>
+          <a href="/admin/audit-log" className="btn btn-secondary">
+            監査ログ
+          </a>
           <a href="/admin/accounts/new" className="btn btn-primary">
             + 新規発行
           </a>
