@@ -22,10 +22,8 @@ const JST_OFFSET = "+09:00";
 export function judgeTrip(input: JudgmentInput): JudgmentResult {
   const { date, stays, setting } = input;
 
-  // Step 1: 休日/祝日除外
-  if (isExcludedDay(date, setting)) {
-    return { trip: null, classifiedStays: [], skipReason: "holiday_excluded" };
-  }
+  // Step 1: 休日/祝日チェック（記録はする・auto-excluded フラグだけ立てる）
+  const { autoExcluded, autoExcludeReason } = computeAutoExcludeFlag(date, setting);
 
   // Step 2: エリア分類
   const classified = stays.map((s) => classifyStay(s, setting));
@@ -37,7 +35,13 @@ export function judgeTrip(input: JudgmentInput): JudgmentResult {
   const sets = buildOutSets(classified, commuteIndexes, setting);
 
   if (sets.length === 0) {
-    return { trip: null, classifiedStays: classified, skipReason: "no_out_stays" };
+    return {
+      trip: null,
+      classifiedStays: classified,
+      autoExcluded,
+      autoExcludeReason,
+      skipReason: "no_out_stays",
+    };
   }
 
   // Step 5: 最長セットを採用（業務時間内 overlap 累積で比較）
@@ -50,6 +54,8 @@ export function judgeTrip(input: JudgmentInput): JudgmentResult {
         trip: null,
         classifiedStays: classified,
         longestOutSet: longest.set,
+        autoExcluded,
+        autoExcludeReason,
         skipReason: "below_hours_threshold",
       };
     }
@@ -59,6 +65,8 @@ export function judgeTrip(input: JudgmentInput): JudgmentResult {
         trip: null,
         classifiedStays: classified,
         longestOutSet: longest.set,
+        autoExcluded,
+        autoExcludeReason,
         skipReason: "below_km_threshold",
       };
     }
@@ -76,11 +84,13 @@ export function judgeTrip(input: JudgmentInput): JudgmentResult {
       total_minutes: Math.round(longest.totalMinutes),
       max_distance_km: parseFloat(longest.maxDistanceKm.toFixed(2)),
       status: "auto_detected",
-      is_excluded: false,
-      excluded_reason: null,
+      is_excluded: autoExcluded,
+      excluded_reason: autoExcludeReason,
     },
     classifiedStays: classified,
     longestOutSet: longest.set,
+    autoExcluded,
+    autoExcludeReason,
   };
 }
 
@@ -88,18 +98,27 @@ export function judgeTrip(input: JudgmentInput): JudgmentResult {
 // ヘルパー
 // ─────────────────────────────────────────────────────────
 
-function isExcludedDay(date: string, setting: AccountSetting): boolean {
-  // 'YYYY-MM-DD' を timezone 非依存に解釈する
-  // 正午 UTC を基準にすることで、ほとんどの timezone でローカル日付が同一日になる
+/**
+ * その日付が休日/祝日で、かつユーザー設定で「含めない」になっているか判定。
+ * Trip は通常通り判定するが、生成時に auto-excluded としてマークするのに使う。
+ */
+function computeAutoExcludeFlag(
+  date: string,
+  setting: AccountSetting
+): { autoExcluded: boolean; autoExcludeReason: string | null } {
   const [y, m, d] = date.split("-").map(Number);
   const checkDate = new Date(Date.UTC(y, m - 1, d, 12));
   const day = checkDate.getUTCDay();
   const isWeekend = day === 0 || day === 6;
   const isHoliday = holidayJp.isHoliday(checkDate);
 
-  if (isWeekend && !setting.include_weekends) return true;
-  if (isHoliday && !setting.include_holidays) return true;
-  return false;
+  if (isHoliday && !setting.include_holidays) {
+    return { autoExcluded: true, autoExcludeReason: "祝日のため自動除外（復元可）" };
+  }
+  if (isWeekend && !setting.include_weekends) {
+    return { autoExcluded: true, autoExcludeReason: "休日のため自動除外（復元可）" };
+  }
+  return { autoExcluded: false, autoExcludeReason: null };
 }
 
 function classifyStay(stay: LocationStay, setting: AccountSetting): ClassifiedStay {

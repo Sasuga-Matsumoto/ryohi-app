@@ -132,9 +132,15 @@ export interface JudgmentResult {
   classifiedStays: ClassifiedStay[];
   /** Trip 化の元になった OUT セット（destination_label / visited_areas のジオコーディングに使用） */
   longestOutSet?: ClassifiedStay[];
-  /** デバッグ用: スキップ理由 */
+  /**
+   * 休日/祝日 + 設定により、新規 Trip を auto-excluded として保存すべきか
+   * （既存 Trip の is_excluded は run-judgment 側で保持される）
+   */
+  autoExcluded: boolean;
+  /** auto-excluded の理由（祝日 / 休日）。autoExcluded=false のときは null */
+  autoExcludeReason: string | null;
+  /** デバッグ用: スキップ理由（trip=null のとき） */
   skipReason?:
-    | "holiday_excluded"
     | "no_out_stays"
     | "below_hours_threshold"
     | "below_km_threshold";

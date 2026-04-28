@@ -109,6 +109,7 @@ export async function POST(request: NextRequest) {
       ok: true,
       trip: null,
       skipReason: result.skipReason,
+      autoExcluded: result.autoExcluded,
       staysCount: stays.length,
     });
   }
@@ -131,27 +132,47 @@ export async function POST(request: NextRequest) {
   );
   const dedupVisited = Array.from(new Set(visitedAreas));
 
-  // upsert (service_role)
-  const { error: upsertErr } = await sysSupabase.from("trips").upsert(
-    {
+  // 既存 Trip があるかチェック（あればユーザー編集フィールドを保持）
+  const { data: existing } = await sysSupabase
+    .from("trips")
+    .select("id, purpose, is_excluded, excluded_reason")
+    .eq("account_id", user.id)
+    .eq("date", date)
+    .maybeSingle();
+
+  // 算出フィールド（再計算で必ず上書きする）
+  const algorithmicFields = {
+    depart_ts: result.trip.depart_ts,
+    return_ts: result.trip.return_ts,
+    destination_label: destinationLabel,
+    visited_areas: dedupVisited,
+    total_minutes: result.trip.total_minutes,
+    max_distance_km: result.trip.max_distance_km,
+    status: "auto_detected" as const,
+  };
+
+  if (existing) {
+    // 既存 Trip: 算出フィールドのみ更新（purpose / is_excluded / excluded_reason はユーザー編集を保持）
+    const { error: updateErr } = await sysSupabase
+      .from("trips")
+      .update(algorithmicFields)
+      .eq("id", existing.id);
+    if (updateErr) {
+      return NextResponse.json({ error: updateErr.message }, { status: 500 });
+    }
+  } else {
+    // 新規 Trip: auto-excluded を反映
+    const { error: insertErr } = await sysSupabase.from("trips").insert({
       account_id: user.id,
       date,
-      depart_ts: result.trip.depart_ts,
-      return_ts: result.trip.return_ts,
-      destination_label: destinationLabel,
-      visited_areas: dedupVisited,
-      total_minutes: result.trip.total_minutes,
-      max_distance_km: result.trip.max_distance_km,
-      status: "auto_detected",
+      ...algorithmicFields,
       purpose: setting.default_purpose,
-      is_excluded: false,
-      excluded_reason: null,
-    },
-    { onConflict: "account_id,date" }
-  );
-
-  if (upsertErr) {
-    return NextResponse.json({ error: upsertErr.message }, { status: 500 });
+      is_excluded: result.autoExcluded,
+      excluded_reason: result.autoExcludeReason,
+    });
+    if (insertErr) {
+      return NextResponse.json({ error: insertErr.message }, { status: 500 });
+    }
   }
 
   return NextResponse.json({
@@ -161,6 +182,9 @@ export async function POST(request: NextRequest) {
       destination_label: destinationLabel,
       visited_areas: dedupVisited,
     },
+    isNew: !existing,
+    autoExcluded: result.autoExcluded,
+    autoExcludeReason: result.autoExcludeReason,
     staysCount: stays.length,
   });
 }
