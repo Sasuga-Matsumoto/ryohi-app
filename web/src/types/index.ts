@@ -8,6 +8,7 @@ export type AccountStatus = "active" | "suspended" | "deleted";
 export type TripDefinitionType = "hours" | "km";
 export type TripStatus = "auto_detected";
 export type LocationStaySource = "SLC" | "GF" | "MOCK";
+export type LocationTrackSource = "GPS" | "MOCK";
 export type AdminAction = "create" | "suspend" | "resume" | "delete" | "edit";
 
 export interface Account {
@@ -62,6 +63,21 @@ export interface LocationStay {
   lng: number;
   accuracy: number; // meters
   source: LocationStaySource;
+}
+
+/**
+ * 移動経路の生 GPS 点
+ * 200m移動 or 5分経過のどちらか早い方で記録
+ * 判定には使わず、Trip 詳細ページの地図表示で使用
+ */
+export interface LocationTrack {
+  id?: string;
+  account_id: string;
+  ts: string; // ISO8601
+  lat: number;
+  lng: number;
+  accuracy: number | null;
+  source: LocationTrackSource;
 }
 
 /**

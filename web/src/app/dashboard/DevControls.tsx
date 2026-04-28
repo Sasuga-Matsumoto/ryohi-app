@@ -80,12 +80,13 @@ export default function DevControls({ workLat, workLng, homeLat, homeLng }: Prop
     setLoading(true);
     setMessage(null);
 
-    // 1. inject stays
+    // 1. inject stays + auto-interpolate tracks
     const injectRes = await fetch("/api/dev/inject-stays", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         replaceForDay: date,
+        auto_interpolate_tracks: true,
         stays: buildStays(),
       }),
     });
@@ -111,12 +112,17 @@ export default function DevControls({ workLat, workLng, homeLat, homeLng }: Prop
     }
     const judged = await judgeRes.json();
 
+    const trackInfo = injected.interpolated_tracks
+      ? ` + 経路 ${injected.interpolated_tracks} 点`
+      : "";
     if (judged.trip) {
       setMessage(
-        `✓ 投入 ${injected.inserted} 件 / Trip 生成 (${(judged.trip.total_minutes / 60).toFixed(1)}h, ${judged.trip.max_distance_km}km)`
+        `✓ 投入 ${injected.inserted} 件${trackInfo} / Trip 生成 (${(judged.trip.total_minutes / 60).toFixed(1)}h, ${judged.trip.max_distance_km}km)`
       );
     } else {
-      setMessage(`✓ 投入 ${injected.inserted} 件 / Trip 生成なし: ${judged.skipReason ?? "?"}`);
+      setMessage(
+        `✓ 投入 ${injected.inserted} 件${trackInfo} / Trip 生成なし: ${judged.skipReason ?? "?"}`
+      );
     }
     setLoading(false);
     router.refresh();

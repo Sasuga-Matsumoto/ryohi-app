@@ -201,27 +201,41 @@ export default function TripRow({ trip }: { trip: TripRowData }) {
           )}
         </td>
         <td style={cellStyle}>
-          {trip.is_excluded ? (
-            <button
-              type="button"
-              onClick={restore}
-              disabled={busy}
+          <div style={{ display: "flex", gap: 6 }}>
+            <a
+              href={`/dashboard/trips/${trip.id}`}
               className="btn btn-secondary"
-              style={{ minHeight: 30, padding: "4px 10px", fontSize: "0.8rem" }}
+              style={{
+                minHeight: 30,
+                padding: "4px 10px",
+                fontSize: "0.8rem",
+                textDecoration: "none",
+              }}
             >
-              ↩ 復元
-            </button>
-          ) : excludeMode ? null : (
-            <button
-              type="button"
-              onClick={() => setExcludeMode(true)}
-              disabled={busy}
-              className="btn btn-secondary"
-              style={{ minHeight: 30, padding: "4px 10px", fontSize: "0.8rem" }}
-            >
-              除外
-            </button>
-          )}
+              詳細
+            </a>
+            {trip.is_excluded ? (
+              <button
+                type="button"
+                onClick={restore}
+                disabled={busy}
+                className="btn btn-secondary"
+                style={{ minHeight: 30, padding: "4px 10px", fontSize: "0.8rem" }}
+              >
+                ↩ 復元
+              </button>
+            ) : excludeMode ? null : (
+              <button
+                type="button"
+                onClick={() => setExcludeMode(true)}
+                disabled={busy}
+                className="btn btn-secondary"
+                style={{ minHeight: 30, padding: "4px 10px", fontSize: "0.8rem" }}
+              >
+                除外
+              </button>
+            )}
+          </div>
         </td>
       </tr>
 
