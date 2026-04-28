@@ -81,6 +81,7 @@ export function judgeTrip(input: JudgmentInput): JudgmentResult {
       date,
       depart_ts,
       return_ts,
+      // 滞在時間 = OUT 累積（移動時間除く）。プラン §A の B 案
       total_minutes: Math.round(longest.totalMinutes),
       max_distance_km: parseFloat(longest.maxDistanceKm.toFixed(2)),
       status: "auto_detected",

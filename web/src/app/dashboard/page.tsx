@@ -198,7 +198,7 @@ export default async function DashboardPage() {
                 <th style={{ padding: 12, textAlign: "left" }}>出張先</th>
                 <th style={{ padding: 12, textAlign: "left" }}>出発</th>
                 <th style={{ padding: 12, textAlign: "left" }}>帰着</th>
-                <th style={{ padding: 12, textAlign: "right" }}>時間</th>
+                <th style={{ padding: 12, textAlign: "right" }} title="現地での滞在時間（移動時間除く）">滞在時間</th>
                 <th style={{ padding: 12, textAlign: "right" }}>最大距離</th>
                 <th style={{ padding: 12, textAlign: "left" }}>目的</th>
                 <th style={{ padding: 12, textAlign: "left" }}>操作</th>
