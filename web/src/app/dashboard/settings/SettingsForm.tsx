@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import LocationPicker from "@/components/LocationPicker";
 
 type Setting = {
   work_lat: number | null;
@@ -82,34 +83,30 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
       {/* 自宅 */}
       <section className="card">
         <h2 style={{ fontSize: "1.05rem", marginBottom: 12 }}>📍 自宅</h2>
-        <p
-          style={{
-            fontSize: "0.8rem",
-            color: "var(--text-light)",
-            marginBottom: 12,
-            lineHeight: 1.6,
-          }}
-        >
-          地図の Pin で設定する UI は MVP では未実装。緯度・経度を直接入力してください。
-          <br />
-          例: 東京駅 35.681, 139.766 / 品川駅 35.625, 139.725
-        </p>
-        <Coords
+        <LocationPicker
+          label="自宅"
           lat={s.home_lat}
           lng={s.home_lng}
-          onLat={(v) => update("home_lat", v)}
-          onLng={(v) => update("home_lng", v)}
+          radiusM={s.home_radius_m}
+          onChange={(lat, lng) => {
+            update("home_lat", lat);
+            update("home_lng", lng);
+          }}
         />
       </section>
 
       {/* 勤務地 */}
       <section className="card">
         <h2 style={{ fontSize: "1.05rem", marginBottom: 12 }}>🏢 勤務地</h2>
-        <Coords
+        <LocationPicker
+          label="勤務地"
           lat={s.work_lat}
           lng={s.work_lng}
-          onLat={(v) => update("work_lat", v)}
-          onLng={(v) => update("work_lng", v)}
+          radiusM={s.work_radius_m}
+          onChange={(lat, lng) => {
+            update("work_lat", lat);
+            update("work_lng", lng);
+          }}
         />
       </section>
 
@@ -252,47 +249,3 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
   );
 }
 
-function Coords({
-  lat,
-  lng,
-  onLat,
-  onLng,
-}: {
-  lat: number | null;
-  lng: number | null;
-  onLat: (v: number | null) => void;
-  onLng: (v: number | null) => void;
-}) {
-  return (
-    <div style={{ display: "flex", gap: 12 }}>
-      <div style={{ flex: 1 }}>
-        <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>緯度 (lat)</label>
-        <input
-          type="number"
-          step="0.000001"
-          value={lat ?? ""}
-          onChange={(e) =>
-            onLat(e.target.value === "" ? null : parseFloat(e.target.value))
-          }
-          className="input"
-          placeholder="35.681"
-          style={{ marginTop: 6 }}
-        />
-      </div>
-      <div style={{ flex: 1 }}>
-        <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>経度 (lng)</label>
-        <input
-          type="number"
-          step="0.000001"
-          value={lng ?? ""}
-          onChange={(e) =>
-            onLng(e.target.value === "" ? null : parseFloat(e.target.value))
-          }
-          className="input"
-          placeholder="139.766"
-          style={{ marginTop: 6 }}
-        />
-      </div>
-    </div>
-  );
-}
