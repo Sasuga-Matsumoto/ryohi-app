@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/supabase/admin-guard";
 import { createClient } from "@/lib/supabase/server";
+import { ArrowLeftIcon, ListIcon } from "@/components/Icon";
 
 const ACTION_LABEL: Record<string, string> = {
   create: "作成",
@@ -7,6 +8,14 @@ const ACTION_LABEL: Record<string, string> = {
   resume: "再開",
   delete: "削除",
   edit: "編集",
+};
+
+const ACTION_BADGE: Record<string, string> = {
+  create: "badge-info",
+  suspend: "badge-suspended",
+  resume: "badge-active",
+  delete: "badge-danger",
+  edit: "badge-info",
 };
 
 export default async function AuditLogPage() {
@@ -22,114 +31,97 @@ export default async function AuditLogPage() {
     .limit(200);
 
   return (
-    <main className="container" style={{ padding: "40px 20px" }}>
-      <header style={{ marginBottom: 24 }}>
-        <a
-          href="/admin"
-          style={{ fontSize: "0.85rem", color: "var(--text-light)" }}
-        >
-          ← ダッシュボード
+    <main className="container page">
+      <div className="breadcrumb">
+        <a href="/admin">
+          <ArrowLeftIcon size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />
+          Admin Console
         </a>
-        <h1
-          style={{
-            fontSize: "1.5rem",
-            color: "var(--dark-blue)",
-            marginTop: 8,
-          }}
-        >
-          監査ログ
-        </h1>
-        <p
-          style={{
-            fontSize: "0.85rem",
-            color: "var(--text-light)",
-            marginTop: 4,
-          }}
-        >
-          直近 200 件
-        </p>
+      </div>
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">監査ログ</h1>
+          <p className="page-subtitle">直近 {logs?.length ?? 0} 件 / 最大 200 件まで表示</p>
+        </div>
       </header>
 
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        {logs && logs.length > 0 ? (
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: "0.85rem",
-            }}
-          >
-            <thead style={{ background: "#F9FAFB" }}>
-              <tr>
-                <th style={{ padding: 12, textAlign: "left" }}>日時</th>
-                <th style={{ padding: 12, textAlign: "left" }}>操作</th>
-                <th style={{ padding: 12, textAlign: "left" }}>管理者</th>
-                <th style={{ padding: 12, textAlign: "left" }}>対象</th>
-                <th style={{ padding: 12, textAlign: "left" }}>詳細</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((log) => {
-                // Supabase joins return arrays for nested relations
-                const adminRel = log.admin as unknown as
-                  | { name: string }
-                  | { name: string }[]
-                  | null;
-                const targetRel = log.target as unknown as
-                  | { name: string; email: string }
-                  | { name: string; email: string }[]
-                  | null;
-                const adminName = Array.isArray(adminRel)
-                  ? adminRel[0]?.name
-                  : adminRel?.name;
-                const target = Array.isArray(targetRel) ? targetRel[0] : targetRel;
-                const details =
-                  log.details && Object.keys(log.details).length > 0
-                    ? JSON.stringify(log.details)
-                    : "—";
+      <section className="card" style={{ padding: 0 }}>
+        <div className="card-header">
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <ListIcon size={16} /> 操作履歴
+          </span>
+        </div>
+        <div style={{ overflowX: "auto" }}>
+          {logs && logs.length > 0 ? (
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>日時</th>
+                  <th>操作</th>
+                  <th>管理者</th>
+                  <th>対象</th>
+                  <th>詳細</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((log) => {
+                  const adminRel = log.admin as unknown as
+                    | { name: string }
+                    | { name: string }[]
+                    | null;
+                  const targetRel = log.target as unknown as
+                    | { name: string; email: string }
+                    | { name: string; email: string }[]
+                    | null;
+                  const adminName = Array.isArray(adminRel)
+                    ? adminRel[0]?.name
+                    : adminRel?.name;
+                  const target = Array.isArray(targetRel) ? targetRel[0] : targetRel;
+                  const details =
+                    log.details && Object.keys(log.details).length > 0
+                      ? JSON.stringify(log.details)
+                      : "—";
 
-                return (
-                  <tr key={log.id} style={{ borderTop: "1px solid #E5E7EB" }}>
-                    <td style={{ padding: 12, whiteSpace: "nowrap" }}>
-                      {new Date(log.ts).toLocaleString("ja-JP")}
-                    </td>
-                    <td style={{ padding: 12 }}>
-                      {ACTION_LABEL[log.action] ?? log.action}
-                    </td>
-                    <td style={{ padding: 12 }}>{adminName ?? "—"}</td>
-                    <td style={{ padding: 12 }}>
-                      {target ? (
-                        <a
-                          href={`/admin/accounts/${log.target_account_id}`}
-                          style={{ color: "var(--bright-blue)" }}
-                        >
-                          {target.name} ({target.email})
-                        </a>
-                      ) : (
-                        log.target_account_id
-                      )}
-                    </td>
-                    <td
-                      style={{
-                        padding: 12,
-                        fontFamily: "monospace",
-                        fontSize: "0.8rem",
-                        color: "var(--text-light)",
-                      }}
-                    >
-                      {details}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        ) : (
-          <p style={{ padding: 24, color: "var(--text-light)" }}>
-            監査ログはまだありません。
-          </p>
-        )}
-      </div>
+                  return (
+                    <tr key={log.id}>
+                      <td className="tabular text-sm" style={{ whiteSpace: "nowrap" }}>
+                        {new Date(log.ts).toLocaleString("ja-JP")}
+                      </td>
+                      <td>
+                        <span className={`badge ${ACTION_BADGE[log.action] ?? "badge-info"}`}>
+                          {ACTION_LABEL[log.action] ?? log.action}
+                        </span>
+                      </td>
+                      <td>{adminName ?? "—"}</td>
+                      <td>
+                        {target ? (
+                          <a href={`/admin/accounts/${log.target_account_id}`}>
+                            <strong>{target.name}</strong>{" "}
+                            <span className="text-muted text-xs">{target.email}</span>
+                          </a>
+                        ) : (
+                          <span className="font-mono text-xs">{log.target_account_id}</span>
+                        )}
+                      </td>
+                      <td className="text-xs text-muted font-mono">{details}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <p
+              style={{
+                padding: "var(--space-12) var(--space-6)",
+                textAlign: "center",
+                color: "var(--text-muted)",
+              }}
+            >
+              監査ログはまだありません
+            </p>
+          )}
+        </div>
+      </section>
     </main>
   );
 }

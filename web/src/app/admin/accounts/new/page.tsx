@@ -1,33 +1,26 @@
 import { requireAdmin } from "@/lib/supabase/admin-guard";
 import NewAccountForm from "./NewAccountForm";
+import { ArrowLeftIcon } from "@/components/Icon";
 
 export default async function NewAccountPage() {
   await requireAdmin();
 
   return (
-    <main className="container" style={{ padding: "40px 20px" }}>
-      <header style={{ marginBottom: 24 }}>
-        <a
-          href="/admin"
-          style={{
-            fontSize: "0.85rem",
-            color: "var(--text-light)",
-          }}
-        >
-          ← ダッシュボード
+    <main className="container page">
+      <div className="breadcrumb">
+        <a href="/admin">
+          <ArrowLeftIcon size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />
+          Admin Console
         </a>
-        <h1
-          style={{
-            fontSize: "1.5rem",
-            color: "var(--dark-blue)",
-            marginTop: 8,
-          }}
-        >
-          新規アカウント発行
-        </h1>
+      </div>
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">新規アカウント発行</h1>
+          <p className="page-subtitle">招待メール（Magic Link）が自動送信されます</p>
+        </div>
       </header>
 
-      <div className="card" style={{ maxWidth: 480 }}>
+      <div className="card" style={{ maxWidth: 520 }}>
         <NewAccountForm />
       </div>
     </main>

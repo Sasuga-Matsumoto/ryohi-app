@@ -2,6 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  PencilIcon,
+  CheckIcon,
+  XIcon,
+  RefreshIcon,
+  ChevronRightIcon,
+  TrashIcon,
+} from "@/components/Icon";
 
 export type TripRowData = {
   id: string;
@@ -79,70 +87,26 @@ export default function TripRow({ trip }: { trip: TripRowData }) {
   };
 
   const cellStyle: React.CSSProperties = {
-    padding: 12,
     opacity: trip.is_excluded ? 0.5 : 1,
+    textDecoration: trip.is_excluded ? "line-through" : "none",
   };
 
   return (
     <>
-      <tr
-        style={{
-          borderTop: "1px solid #E5E7EB",
-        }}
-      >
-        <td
-          style={{
-            ...cellStyle,
-            textDecoration: trip.is_excluded ? "line-through" : "none",
-          }}
-        >
-          {trip.date}
-        </td>
-        <td
-          style={{
-            ...cellStyle,
-            textDecoration: trip.is_excluded ? "line-through" : "none",
-          }}
-        >
-          {trip.destination_label ?? "—"}
-        </td>
-        <td
-          style={{
-            ...cellStyle,
-            textDecoration: trip.is_excluded ? "line-through" : "none",
-          }}
-        >
-          {departTime}
-        </td>
-        <td
-          style={{
-            ...cellStyle,
-            textDecoration: trip.is_excluded ? "line-through" : "none",
-          }}
-        >
-          {returnTime}
-        </td>
-        <td
-          style={{
-            ...cellStyle,
-            textAlign: "right",
-            textDecoration: trip.is_excluded ? "line-through" : "none",
-          }}
-        >
+      <tr>
+        <td style={cellStyle} className="tabular">{trip.date}</td>
+        <td style={cellStyle}>{trip.destination_label ?? "—"}</td>
+        <td style={cellStyle} className="tabular">{departTime}</td>
+        <td style={cellStyle} className="tabular">{returnTime}</td>
+        <td style={cellStyle} className="num">
           {(trip.total_minutes / 60).toFixed(1)}h
         </td>
-        <td
-          style={{
-            ...cellStyle,
-            textAlign: "right",
-            textDecoration: trip.is_excluded ? "line-through" : "none",
-          }}
-        >
+        <td style={cellStyle} className="num">
           {trip.max_distance_km != null ? `${trip.max_distance_km.toFixed(1)}km` : "—"}
         </td>
-        <td style={cellStyle}>
+        <td>
           {editing ? (
-            <div style={{ display: "flex", gap: 6 }}>
+            <div style={{ display: "flex", gap: "var(--space-2)" }}>
               <input
                 type="text"
                 value={purposeDraft}
@@ -154,25 +118,25 @@ export default function TripRow({ trip }: { trip: TripRowData }) {
                 autoFocus
                 disabled={busy}
                 className="input"
-                style={{ minHeight: 32, padding: "4px 8px", fontSize: "0.85rem" }}
+                style={{ minHeight: 32, fontSize: "var(--text-sm)" }}
               />
               <button
                 type="button"
                 onClick={savePurpose}
                 disabled={busy}
-                className="btn btn-primary"
-                style={{ minHeight: 32, padding: "4px 10px", fontSize: "0.8rem" }}
+                className="btn btn-primary btn-sm btn-icon"
+                aria-label="保存"
               >
-                保存
+                <CheckIcon size={14} />
               </button>
               <button
                 type="button"
                 onClick={cancelPurposeEdit}
                 disabled={busy}
-                className="btn btn-secondary"
-                style={{ minHeight: 32, padding: "4px 10px", fontSize: "0.8rem" }}
+                className="btn btn-ghost btn-sm btn-icon"
+                aria-label="キャンセル"
               >
-                ✕
+                <XIcon size={14} />
               </button>
             </div>
           ) : (
@@ -180,58 +144,56 @@ export default function TripRow({ trip }: { trip: TripRowData }) {
               type="button"
               onClick={() => !trip.is_excluded && setEditing(true)}
               disabled={trip.is_excluded}
-              title={trip.is_excluded ? "除外中の Trip は編集できません" : "クリックで編集"}
+              title={trip.is_excluded ? "除外中は編集できません" : "クリックで編集"}
+              className="btn btn-ghost btn-sm"
               style={{
-                background: "none",
-                border: "none",
-                padding: 0,
-                color: trip.is_excluded ? "var(--text-light)" : "var(--text)",
+                background: "transparent",
+                padding: "4px 8px",
+                margin: "-4px -8px",
+                color: trip.is_excluded ? "var(--text-disabled)" : "var(--text)",
                 cursor: trip.is_excluded ? "not-allowed" : "pointer",
-                textAlign: "left",
-                font: "inherit",
                 textDecoration: trip.is_excluded ? "line-through" : "none",
+                fontWeight: 400,
+                gap: "var(--space-2)",
               }}
             >
-              {trip.purpose}{!trip.is_excluded && (
-                <span style={{ color: "var(--text-light)", fontSize: "0.75rem", marginLeft: 6 }}>
-                  ✎
-                </span>
+              <span>{trip.purpose}</span>
+              {!trip.is_excluded && (
+                <PencilIcon size={12} style={{ color: "var(--text-disabled)" }} />
               )}
             </button>
           )}
         </td>
-        <td style={cellStyle}>
-          <div style={{ display: "flex", gap: 6 }}>
+        <td>
+          <div style={{ display: "flex", gap: "var(--space-1)", justifyContent: "flex-end" }}>
             <a
               href={`/dashboard/trips/${trip.id}`}
-              className="btn btn-secondary"
-              style={{
-                minHeight: 30,
-                padding: "4px 10px",
-                fontSize: "0.8rem",
-                textDecoration: "none",
-              }}
+              className="btn btn-ghost btn-sm"
+              aria-label="詳細"
             >
               詳細
+              <ChevronRightIcon size={12} />
             </a>
             {trip.is_excluded ? (
               <button
                 type="button"
                 onClick={restore}
                 disabled={busy}
-                className="btn btn-secondary"
-                style={{ minHeight: 30, padding: "4px 10px", fontSize: "0.8rem" }}
+                className="btn btn-ghost btn-sm"
+                aria-label="復元"
               >
-                ↩ 復元
+                <RefreshIcon size={12} />
+                復元
               </button>
             ) : excludeMode ? null : (
               <button
                 type="button"
                 onClick={() => setExcludeMode(true)}
                 disabled={busy}
-                className="btn btn-secondary"
-                style={{ minHeight: 30, padding: "4px 10px", fontSize: "0.8rem" }}
+                className="btn btn-ghost btn-sm"
+                aria-label="除外"
               >
+                <TrashIcon size={12} />
                 除外
               </button>
             )}
@@ -241,10 +203,10 @@ export default function TripRow({ trip }: { trip: TripRowData }) {
 
       {/* 除外モード時の確認行 */}
       {excludeMode && !trip.is_excluded && (
-        <tr style={{ background: "#FEF3C7" }}>
-          <td colSpan={8} style={{ padding: 12 }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <span style={{ fontSize: "0.85rem" }}>
+        <tr style={{ background: "var(--warning-bg)" }}>
+          <td colSpan={8}>
+            <div className="row" style={{ gap: "var(--space-2)" }}>
+              <span className="text-sm">
                 この Trip を出張から除外しますか？理由（任意）:
               </span>
               <input
@@ -254,19 +216,13 @@ export default function TripRow({ trip }: { trip: TripRowData }) {
                 placeholder="私用だった / 誤検知"
                 disabled={busy}
                 className="input"
-                style={{
-                  flex: 1,
-                  minHeight: 32,
-                  padding: "4px 8px",
-                  fontSize: "0.85rem",
-                }}
+                style={{ flex: 1, minHeight: 32 }}
               />
               <button
                 type="button"
                 onClick={exclude}
                 disabled={busy}
-                className="btn btn-danger"
-                style={{ minHeight: 32, padding: "4px 12px", fontSize: "0.8rem" }}
+                className="btn btn-danger btn-sm"
               >
                 除外する
               </button>
@@ -277,8 +233,7 @@ export default function TripRow({ trip }: { trip: TripRowData }) {
                   setExcludeReason("");
                 }}
                 disabled={busy}
-                className="btn btn-secondary"
-                style={{ minHeight: 32, padding: "4px 12px", fontSize: "0.8rem" }}
+                className="btn btn-ghost btn-sm"
               >
                 キャンセル
               </button>
@@ -289,15 +244,8 @@ export default function TripRow({ trip }: { trip: TripRowData }) {
 
       {/* 除外済の理由表示 */}
       {trip.is_excluded && trip.excluded_reason && (
-        <tr style={{ background: "#F9FAFB" }}>
-          <td
-            colSpan={8}
-            style={{
-              padding: "6px 12px 10px",
-              fontSize: "0.8rem",
-              color: "var(--text-light)",
-            }}
-          >
+        <tr style={{ background: "var(--surface-muted)" }}>
+          <td colSpan={8} className="text-xs text-muted" style={{ paddingTop: 4, paddingBottom: 8 }}>
             └ 除外理由: {trip.excluded_reason}
           </td>
         </tr>
@@ -305,7 +253,7 @@ export default function TripRow({ trip }: { trip: TripRowData }) {
 
       {error && (
         <tr>
-          <td colSpan={8} style={{ padding: "6px 12px", color: "var(--danger)", fontSize: "0.85rem" }}>
+          <td colSpan={8} className="text-sm text-danger">
             {error}
           </td>
         </tr>

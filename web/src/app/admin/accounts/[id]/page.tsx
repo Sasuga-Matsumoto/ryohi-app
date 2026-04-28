@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/supabase/admin-guard";
 import { createClient } from "@/lib/supabase/server";
 import AccountActions from "./AccountActions";
+import { ArrowLeftIcon } from "@/components/Icon";
 
 export default async function AccountDetailPage({
   params,
@@ -64,23 +65,18 @@ export default async function AccountDetailPage({
   };
 
   return (
-    <main className="container" style={{ padding: "40px 20px" }}>
-      <header style={{ marginBottom: 24 }}>
-        <a
-          href="/admin"
-          style={{ fontSize: "0.85rem", color: "var(--text-light)" }}
-        >
-          ← ダッシュボード
+    <main className="container page">
+      <div className="breadcrumb">
+        <a href="/admin">
+          <ArrowLeftIcon size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />
+          Admin Console
         </a>
-        <h1
-          style={{
-            fontSize: "1.5rem",
-            color: "var(--dark-blue)",
-            marginTop: 8,
-          }}
-        >
-          アカウント詳細
-        </h1>
+      </div>
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">{account.name}</h1>
+          <p className="page-subtitle">{account.email} / {account.company_name}</p>
+        </div>
       </header>
 
       <div

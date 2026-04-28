@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import TripDetailMap from "./TripDetailMap";
 import TripDetailActions from "./TripDetailActions";
+import { ArrowLeftIcon, MapPinIcon, RouteIcon, ListIcon } from "@/components/Icon";
 
 export default async function TripDetailPage({
   params,
@@ -26,20 +27,19 @@ export default async function TripDetailPage({
 
   if (!trip) {
     return (
-      <main className="container" style={{ padding: "60px 20px" }}>
+      <main className="container page">
         <div className="card" style={{ maxWidth: 560, margin: "0 auto" }}>
-          <h1 style={{ fontSize: "1.3rem", color: "var(--dark-blue)" }}>
-            出張が見つかりません
-          </h1>
-          <p style={{ color: "var(--text-light)", marginTop: 12 }}>
+          <h1 className="page-title">出張が見つかりません</h1>
+          <p className="text-light" style={{ marginTop: "var(--space-3)" }}>
             該当 ID の Trip がないか、アクセス権がありません。
           </p>
           <a
             href="/dashboard"
             className="btn btn-secondary"
-            style={{ marginTop: 16, display: "inline-block" }}
+            style={{ marginTop: "var(--space-4)" }}
           >
-            ← ダッシュボード
+            <ArrowLeftIcon size={14} />
+            ダッシュボード
           </a>
         </div>
       </main>
@@ -97,28 +97,30 @@ export default async function TripDetailPage({
   const returnTime = formatHHMM(trip.return_ts);
 
   return (
-    <main className="container" style={{ padding: "40px 20px" }}>
-      <header style={{ marginBottom: 24 }}>
-        <a
-          href="/dashboard"
-          style={{ fontSize: "0.85rem", color: "var(--text-light)" }}
-        >
-          ← ダッシュボード
+    <main className="container page">
+      <div className="breadcrumb">
+        <a href="/dashboard">
+          <ArrowLeftIcon size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />
+          ダッシュボード
         </a>
-        <h1
-          style={{
-            fontSize: "1.5rem",
-            color: "var(--dark-blue)",
-            marginTop: 8,
-          }}
-        >
-          出張詳細: {trip.date} ({weekdayJa(trip.date)})
-        </h1>
+      </div>
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">
+            出張詳細: {trip.date} ({weekdayJa(trip.date)})
+          </h1>
+          {trip.destination_label && (
+            <p className="page-subtitle">
+              <MapPinIcon size={14} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />
+              {trip.destination_label}
+            </p>
+          )}
+        </div>
       </header>
 
       {/* 基本情報 */}
-      <section className="card" style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: "1.05rem", marginBottom: 16 }}>基本情報</h2>
+      <section className="card" style={{ marginBottom: "var(--space-5)" }}>
+        <h2 className="section-title">基本情報</h2>
         <dl
           style={{
             display: "grid",
@@ -161,8 +163,10 @@ export default async function TripDetailPage({
       </section>
 
       {/* マップ */}
-      <section className="card" style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: "1.05rem", marginBottom: 12 }}>移動経路マップ</h2>
+      <section className="card" style={{ marginBottom: "var(--space-5)" }}>
+        <h2 className="section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <RouteIcon size={18} /> 移動経路マップ
+        </h2>
         <TripDetailMap
           work={
             setting?.work_lat != null && setting?.work_lng != null
@@ -194,20 +198,16 @@ export default async function TripDetailPage({
             lng: t.lng,
           }))}
         />
-        <p
-          style={{
-            fontSize: "0.75rem",
-            color: "var(--text-light)",
-            marginTop: 8,
-          }}
-        >
-          🏢 勤務地（青円） / 🏠 自宅（緑円） / 📍 滞在ノード（赤）/ ・ 200m間隔の経路点（小円）
+        <p className="helper" style={{ marginTop: "var(--space-2)" }}>
+          勤務地（青円） / 自宅（緑円） / 滞在ノード（赤丸） / 200m間隔の経路点（小円）
         </p>
       </section>
 
       {/* 滞在ノード */}
-      <section className="card" style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: "1.05rem", marginBottom: 12 }}>滞在ノード（30分以上同地点）</h2>
+      <section className="card" style={{ marginBottom: "var(--space-5)" }}>
+        <h2 className="section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <MapPinIcon size={18} /> 滞在ノード（30分以上同地点）
+        </h2>
         {visitedStays.length === 0 ? (
           <p style={{ color: "var(--text-light)" }}>該当する滞在ノードがありません</p>
         ) : (
@@ -236,15 +236,19 @@ export default async function TripDetailPage({
       <section className="card">
         <details>
           <summary
+            className="section-title"
             style={{
-              fontSize: "1.05rem",
-              fontWeight: 600,
               cursor: "pointer",
               listStyle: "none",
               userSelect: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 0,
             }}
           >
-            移動ログ（200m間隔・全 {tracks?.length ?? 0} 点） ▼
+            <ListIcon size={18} />
+            移動ログ（200m間隔・全 {tracks?.length ?? 0} 点）
           </summary>
           <div style={{ marginTop: 16, maxHeight: 400, overflowY: "auto" }}>
             {!tracks || tracks.length === 0 ? (

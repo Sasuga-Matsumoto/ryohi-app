@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { InfoIcon, PlusIcon } from "@/components/Icon";
 
 export default function NewAccountForm() {
   const router = useRouter();
@@ -34,15 +35,11 @@ export default function NewAccountForm() {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      style={{ display: "flex", flexDirection: "column", gap: 16 }}
-    >
+    <form onSubmit={handleSubmit} className="stack">
       <div>
-        <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>
-          メールアドレス *
-        </label>
+        <label htmlFor="email" className="label label-required">メールアドレス</label>
         <input
+          id="email"
           type="email"
           required
           value={email}
@@ -50,13 +47,13 @@ export default function NewAccountForm() {
           className="input"
           placeholder="user@example.com"
           disabled={loading}
-          style={{ marginTop: 6 }}
         />
       </div>
 
       <div>
-        <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>氏名 *</label>
+        <label htmlFor="name" className="label label-required">氏名</label>
         <input
+          id="name"
           type="text"
           required
           value={name}
@@ -64,13 +61,13 @@ export default function NewAccountForm() {
           className="input"
           placeholder="山田 太郎"
           disabled={loading}
-          style={{ marginTop: 6 }}
         />
       </div>
 
       <div>
-        <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>会社名 *</label>
+        <label htmlFor="company" className="label label-required">会社名</label>
         <input
+          id="company"
           type="text"
           required
           value={companyName}
@@ -78,39 +75,34 @@ export default function NewAccountForm() {
           className="input"
           placeholder="株式会社 XXX"
           disabled={loading}
-          style={{ marginTop: 6 }}
         />
       </div>
 
-      <div
-        style={{
-          padding: 12,
-          background: "#F0F9FF",
-          borderRadius: 8,
-          fontSize: "0.85rem",
-          color: "#0C4A6E",
-          lineHeight: 1.7,
-        }}
-      >
-        <strong>発行後の挙動:</strong>
-        <br />
-        • 入力メアドに Magic Link 招待メールが自動送信されます
-        <br />
-        • 受信者がリンクをタップするとログイン状態になります
-        <br />
-        • 利用開始時にオンボーディング（自宅・勤務地等の設定）に誘導されます
+      <div className="alert alert-info">
+        <InfoIcon size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+        <div>
+          <strong>発行後の挙動</strong>
+          <ul style={{ marginTop: 4, paddingLeft: 18, lineHeight: 1.7 }}>
+            <li>入力メアドに Magic Link 招待メールが自動送信されます</li>
+            <li>受信者がリンクをタップするとログイン状態になります</li>
+            <li>利用開始時にオンボーディングへ誘導されます</li>
+          </ul>
+        </div>
       </div>
 
       <button
         type="submit"
-        className="btn btn-primary"
+        className="btn btn-primary btn-lg"
         disabled={loading || !email || !name || !companyName}
       >
-        {loading ? "発行中…" : "発行 → 招待メール送信"}
+        <PlusIcon size={16} />
+        {loading ? "発行中..." : "発行 → 招待メール送信"}
       </button>
 
       {error && (
-        <p style={{ color: "var(--danger)", fontSize: "0.85rem" }}>{error}</p>
+        <p className="text-sm text-danger" role="alert">
+          {error}
+        </p>
       )}
     </form>
   );

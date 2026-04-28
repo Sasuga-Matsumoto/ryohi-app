@@ -1,12 +1,18 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import {
+  PlusIcon,
+  ListIcon,
+  UsersIcon,
+  ChevronRightIcon,
+  ShieldIcon,
+} from "@/components/Icon";
 
 export default async function AdminPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
   if (!user) redirect("/login");
 
   const { data: account } = await supabase
@@ -17,12 +23,10 @@ export default async function AdminPage() {
 
   if (!account || account.role !== "admin" || account.status !== "active") {
     return (
-      <main className="container" style={{ padding: "60px 20px" }}>
+      <main className="container page">
         <div className="card" style={{ maxWidth: 560, margin: "0 auto" }}>
-          <h1 style={{ fontSize: "1.3rem", color: "var(--danger)" }}>
-            アクセス権がありません
-          </h1>
-          <p style={{ color: "var(--text-light)", marginTop: 12 }}>
+          <h1 className="page-title text-danger">アクセス権がありません</h1>
+          <p className="text-light" style={{ marginTop: "var(--space-3)" }}>
             Admin Console は運営者専用です。
           </p>
         </div>
@@ -30,7 +34,6 @@ export default async function AdminPage() {
     );
   }
 
-  // 全 Account を取得
   const { data: accounts } = await supabase
     .from("accounts")
     .select("id, email, name, company_name, role, status, created_at")
@@ -56,133 +59,117 @@ export default async function AdminPage() {
   };
 
   return (
-    <main className="container" style={{ padding: "40px 20px" }}>
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 28,
-        }}
-      >
+    <main className="container page">
+      <header className="page-header">
         <div>
           <p
+            className="text-xs"
             style={{
-              fontSize: "0.8rem",
-              color: "var(--text-light)",
-              letterSpacing: "0.05em",
+              color: "var(--bright-blue)",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
               marginBottom: 4,
             }}
           >
-            ADMIN CONSOLE
+            <ShieldIcon size={12} /> ADMIN CONSOLE
           </p>
-          <h1 style={{ fontSize: "1.5rem", color: "var(--dark-blue)" }}>
-            運営ダッシュボード
-          </h1>
+          <h1 className="page-title">運営ダッシュボード</h1>
+          <p className="page-subtitle">アカウントの発行・停止・削除と監査ログ管理</p>
         </div>
-        <nav style={{ display: "flex", gap: 12 }}>
-          <a href="/dashboard" className="btn btn-secondary">
-            ダッシュボード
-          </a>
+        <nav className="row">
           <a href="/admin/audit-log" className="btn btn-secondary">
+            <ListIcon size={14} />
             監査ログ
           </a>
           <a href="/admin/accounts/new" className="btn btn-primary">
-            + 新規発行
+            <PlusIcon size={14} />
+            新規発行
           </a>
         </nav>
       </header>
 
       {/* サマリ */}
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: 16,
-          marginBottom: 28,
-        }}
-      >
-        {[
-          { label: "全顧客", value: summary.total, color: "var(--dark-blue)" },
-          { label: "アクティブ", value: summary.active, color: "#059669" },
-          { label: "停止中", value: summary.suspended, color: "#D97706" },
-          { label: "削除済", value: summary.deleted, color: "#6B7280" },
-        ].map(({ label, value, color }) => (
-          <div className="card" key={label}>
-            <p style={{ fontSize: "0.85rem", color: "var(--text-light)" }}>
-              {label}
-            </p>
-            <p
-              style={{
-                fontSize: "1.8rem",
-                fontWeight: 700,
-                color,
-                marginTop: 4,
-              }}
-            >
-              {value}
-            </p>
-          </div>
-        ))}
+      <section className="grid grid-4" style={{ marginBottom: "var(--space-6)" }}>
+        <div className="card">
+          <p className="stat-label">全顧客</p>
+          <p className="stat-value">{summary.total}</p>
+        </div>
+        <div className="card">
+          <p className="stat-label">アクティブ</p>
+          <p className="stat-value text-success">{summary.active}</p>
+        </div>
+        <div className="card">
+          <p className="stat-label">停止中</p>
+          <p className="stat-value text-warning">{summary.suspended}</p>
+        </div>
+        <div className="card">
+          <p className="stat-label">削除済</p>
+          <p className="stat-value text-muted">{summary.deleted}</p>
+        </div>
       </section>
 
       {/* 一覧 */}
-      <section className="card" style={{ padding: 0, overflow: "hidden" }}>
-        <div
-          style={{
-            padding: "16px 24px",
-            borderBottom: "1px solid #E5E7EB",
-            fontWeight: 600,
-          }}
-        >
-          アカウント一覧
+      <section className="card" style={{ padding: 0 }}>
+        <div className="card-header">
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <UsersIcon size={16} /> アカウント一覧
+          </span>
+          <span className="text-muted text-xs">{summary.total} 件</span>
         </div>
-        {accounts && accounts.length > 0 ? (
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: "0.9rem",
-            }}
-          >
-            <thead style={{ background: "#F9FAFB" }}>
-              <tr>
-                <th style={{ padding: 12, textAlign: "left" }}>氏名</th>
-                <th style={{ padding: 12, textAlign: "left" }}>メール</th>
-                <th style={{ padding: 12, textAlign: "left" }}>会社</th>
-                <th style={{ padding: 12, textAlign: "left" }}>ロール</th>
-                <th style={{ padding: 12, textAlign: "left" }}>状態</th>
-                <th style={{ padding: 12, textAlign: "right" }}>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {accounts.map((a) => (
-                <tr key={a.id} style={{ borderTop: "1px solid #E5E7EB" }}>
-                  <td style={{ padding: 12 }}>{a.name}</td>
-                  <td style={{ padding: 12 }}>{a.email}</td>
-                  <td style={{ padding: 12 }}>{a.company_name}</td>
-                  <td style={{ padding: 12 }}>{a.role}</td>
-                  <td style={{ padding: 12 }}>{statusBadge(a.status)}</td>
-                  <td style={{ padding: 12, textAlign: "right" }}>
-                    <a
-                      href={`/admin/accounts/${a.id}`}
-                      style={{
-                        color: "var(--bright-blue)",
-                        fontSize: "0.85rem",
-                      }}
-                    >
-                      詳細
-                    </a>
-                  </td>
+        <div style={{ overflowX: "auto" }}>
+          {accounts && accounts.length > 0 ? (
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>氏名</th>
+                  <th>メール</th>
+                  <th>会社</th>
+                  <th>ロール</th>
+                  <th>状態</th>
+                  <th></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p style={{ padding: 24, color: "var(--text-light)" }}>
-            アカウントがまだありません。
-          </p>
-        )}
+              </thead>
+              <tbody>
+                {accounts.map((a) => (
+                  <tr key={a.id}>
+                    <td><strong>{a.name}</strong></td>
+                    <td className="text-muted">{a.email}</td>
+                    <td>{a.company_name}</td>
+                    <td className="text-sm text-muted">{a.role}</td>
+                    <td>{statusBadge(a.status)}</td>
+                    <td style={{ textAlign: "right" }}>
+                      <a href={`/admin/accounts/${a.id}`} className="btn btn-ghost btn-sm">
+                        詳細
+                        <ChevronRightIcon size={12} />
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div
+              style={{
+                padding: "var(--space-12) var(--space-6)",
+                textAlign: "center",
+                color: "var(--text-muted)",
+              }}
+            >
+              <p>アカウントがまだありません</p>
+              <a
+                href="/admin/accounts/new"
+                className="btn btn-primary"
+                style={{ marginTop: "var(--space-4)" }}
+              >
+                <PlusIcon size={14} />
+                最初のアカウントを発行
+              </a>
+            </div>
+          )}
+        </div>
       </section>
     </main>
   );

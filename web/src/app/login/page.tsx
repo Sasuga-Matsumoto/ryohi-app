@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { CheckIcon } from "@/components/Icon";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -23,88 +25,91 @@ export default function LoginPage() {
     });
 
     setLoading(false);
-
-    if (err) {
-      setError(err.message);
-    } else {
-      setSent(true);
-    }
+    if (err) setError(err.message);
+    else setSent(true);
   };
 
   return (
     <main
       style={{
-        minHeight: "100vh",
+        minHeight: "calc(100vh - 60px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "20px",
+        padding: "var(--space-6) var(--space-4)",
       }}
     >
-      <div className="card" style={{ width: "100%", maxWidth: 420 }}>
-        <h1
-          style={{
-            fontSize: "1.5rem",
-            color: "var(--dark-blue)",
-            marginBottom: 8,
-            textAlign: "center",
-          }}
-        >
-          PLEX 出張ログ
-        </h1>
-        <p
-          style={{
-            color: "var(--text-light)",
-            fontSize: "0.9rem",
-            textAlign: "center",
-            marginBottom: 28,
-          }}
-        >
-          メールアドレスを入力してください
-        </p>
+      <div
+        className="card card-elevated"
+        style={{ width: "100%", maxWidth: 420 }}
+      >
+        <div style={{ textAlign: "center", marginBottom: "var(--space-6)" }}>
+          <Image
+            src="/logo.png"
+            alt="PLEX"
+            width={56}
+            height={56}
+            style={{ display: "inline-block" }}
+            priority
+          />
+          <h1
+            className="page-title"
+            style={{
+              marginTop: "var(--space-3)",
+              fontSize: "var(--text-xl)",
+            }}
+          >
+            PLEX 出張ログ
+          </h1>
+          <p
+            className="text-sm text-muted"
+            style={{ marginTop: "var(--space-1)" }}
+          >
+            メールアドレスを入力してください
+          </p>
+        </div>
 
         {sent ? (
           <div
-            style={{
-              padding: "16px",
-              background: "#ECFDF5",
-              borderRadius: 8,
-              color: "#065F46",
-              fontSize: "0.9rem",
-              lineHeight: 1.7,
-            }}
+            className="alert alert-success"
+            style={{ flexDirection: "column", textAlign: "center", alignItems: "center" }}
           >
-            <strong>✓ メールを送信しました</strong>
-            <br />
-            <span style={{ color: "var(--text-light)" }}>
-              {email} 宛のリンクをタップしてログインしてください。
+            <CheckIcon size={24} />
+            <strong>メールを送信しました</strong>
+            <p className="text-sm">
+              <span className="text-muted">{email}</span> 宛のリンクをタップしてログインしてください。
               数分以内に届きます。
-            </span>
+            </p>
           </div>
         ) : (
           <form
             onSubmit={handleSubmit}
-            style={{ display: "flex", flexDirection: "column", gap: 12 }}
+            className="stack"
           >
-            <input
-              type="email"
-              required
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input"
-              autoFocus
-              disabled={loading}
-            />
+            <div>
+              <label htmlFor="email" className="label label-required">メールアドレス</label>
+              <input
+                id="email"
+                type="email"
+                required
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input"
+                autoFocus
+                disabled={loading}
+              />
+            </div>
             <button
               type="submit"
-              className="btn btn-primary"
+              className="btn btn-primary btn-lg"
               disabled={loading || !email}
+              style={{ width: "100%" }}
             >
-              {loading ? "送信中…" : "ログインリンクを送信"}
+              {loading ? "送信中..." : "ログインリンクを送信"}
             </button>
             {error && (
-              <p style={{ color: "var(--danger)", fontSize: "0.85rem" }}>
+              <p className="text-sm text-danger" role="alert">
                 {error}
               </p>
             )}
@@ -112,10 +117,9 @@ export default function LoginPage() {
         )}
 
         <p
+          className="text-xs text-muted"
           style={{
-            marginTop: 24,
-            color: "var(--text-light)",
-            fontSize: "0.75rem",
+            marginTop: "var(--space-6)",
             textAlign: "center",
             lineHeight: 1.7,
           }}
