@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import DevControls from "./DevControls";
+import TripRow from "./TripRow";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -61,7 +62,7 @@ export default async function DashboardPage() {
 
   const { data: monthTrips } = await supabase
     .from("trips")
-    .select("id, date, destination_label, visited_areas, depart_ts, return_ts, total_minutes, max_distance_km, purpose, is_excluded")
+    .select("id, date, destination_label, visited_areas, depart_ts, return_ts, total_minutes, max_distance_km, purpose, is_excluded, excluded_reason")
     .eq("account_id", user.id)
     .gte("date", monthStartStr)
     .order("date", { ascending: false });
@@ -200,49 +201,13 @@ export default async function DashboardPage() {
                 <th style={{ padding: 12, textAlign: "right" }}>時間</th>
                 <th style={{ padding: 12, textAlign: "right" }}>最大距離</th>
                 <th style={{ padding: 12, textAlign: "left" }}>目的</th>
-                <th style={{ padding: 12, textAlign: "left" }}>状態</th>
+                <th style={{ padding: 12, textAlign: "left" }}>操作</th>
               </tr>
             </thead>
             <tbody>
-              {monthTrips.map((t) => {
-                const departTime = new Date(t.depart_ts).toLocaleTimeString("ja-JP", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-                const returnTime = new Date(t.return_ts).toLocaleTimeString("ja-JP", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-                return (
-                  <tr
-                    key={t.id}
-                    style={{
-                      borderTop: "1px solid #E5E7EB",
-                      opacity: t.is_excluded ? 0.4 : 1,
-                      textDecoration: t.is_excluded ? "line-through" : "none",
-                    }}
-                  >
-                    <td style={{ padding: 12 }}>{t.date}</td>
-                    <td style={{ padding: 12 }}>{t.destination_label ?? "—"}</td>
-                    <td style={{ padding: 12 }}>{departTime}</td>
-                    <td style={{ padding: 12 }}>{returnTime}</td>
-                    <td style={{ padding: 12, textAlign: "right" }}>
-                      {(t.total_minutes / 60).toFixed(1)}h
-                    </td>
-                    <td style={{ padding: 12, textAlign: "right" }}>
-                      {t.max_distance_km != null ? `${t.max_distance_km.toFixed(1)}km` : "—"}
-                    </td>
-                    <td style={{ padding: 12 }}>{t.purpose}</td>
-                    <td style={{ padding: 12 }}>
-                      {t.is_excluded ? (
-                        <span className="badge badge-deleted">除外</span>
-                      ) : (
-                        <span className="badge badge-active">記録</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+              {monthTrips.map((t) => (
+                <TripRow key={t.id} trip={t} />
+              ))}
             </tbody>
           </table>
         ) : (
