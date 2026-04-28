@@ -7,6 +7,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { judgeTrip } from "@/lib/judgment";
+import { reverseGeocodeStays } from "@/lib/geocoding";
 import type { AccountSetting, LocationStay } from "@/types";
 
 export async function POST(request: NextRequest) {
@@ -114,23 +115,26 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // destination_label と visited_areas は逆ジオコーディング（Phase 2 で実装）
-  // MVP では座標から仮ラベルを作る
-  const longestStay = (result.longestOutSet ?? [])
-    .slice()
-    .sort(
-      (a, b) =>
-        new Date(b.ts_end).getTime() -
-        new Date(b.ts_start).getTime() -
-        (new Date(a.ts_end).getTime() - new Date(a.ts_start).getTime())
-    )[0];
-  const destinationLabel = longestStay
-    ? `(${longestStay.lat.toFixed(3)}, ${longestStay.lng.toFixed(3)})`
-    : null;
-  const visitedAreas = (result.longestOutSet ?? []).map(
-    (s) => `(${s.lat.toFixed(3)}, ${s.lng.toFixed(3)})`
-  );
-  const dedupVisited = Array.from(new Set(visitedAreas));
+  // 滞在時間順（長い順）にソート
+  const outStays = (result.longestOutSet ?? []).slice().sort((a, b) => {
+    const da = new Date(a.ts_end).getTime() - new Date(a.ts_start).getTime();
+    const db = new Date(b.ts_end).getTime() - new Date(b.ts_start).getTime();
+    return db - da;
+  });
+
+  // 逆ジオコーディング（Nominatim・1 req/sec）
+  const labels = await reverseGeocodeStays(outStays);
+
+  const destinationLabel = labels[0] ?? null;
+  // 重複除去（市区町村単位、滞在時間順を維持）
+  const dedupVisited: string[] = [];
+  const seen = new Set<string>();
+  for (const l of labels) {
+    if (!seen.has(l)) {
+      seen.add(l);
+      dedupVisited.push(l);
+    }
+  }
 
   // 既存 Trip があるかチェック（あればユーザー編集フィールドを保持）
   const { data: existing } = await sysSupabase

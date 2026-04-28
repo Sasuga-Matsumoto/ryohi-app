@@ -71,7 +71,7 @@ describe("時間モード平日テスト（5時間滞在 → Trip 1件）", () =
     const stays = [
       makeStay(date, "06:00", "07:00", HOME.lat, HOME.lng),
       makeStay(date, "09:00", "13:00", WORK.lat, WORK.lng),
-      makeStay(date, "13:30", "18:30", SHIBUYA.lat, SHIBUYA.lng), // 5h、業務時間 13:30-18:00 = 4.5h overlap
+      makeStay(date, "13:30", "18:30", SHIBUYA.lat, SHIBUYA.lng), // 5h（業務時間と重なるので全時間カウント）
       makeStay(date, "19:00", "20:00", WORK.lat, WORK.lng),
       makeStay(date, "21:00", "23:00", HOME.lat, HOME.lng),
     ];
@@ -82,7 +82,7 @@ describe("時間モード平日テスト（5時間滞在 → Trip 1件）", () =
     expect(result.trip?.status).toBe("auto_detected");
     expect(result.trip?.depart_ts).toBe(ts(date, "13:00")); // WORK 退出
     expect(result.trip?.return_ts).toBe(ts(date, "19:00")); // WORK 到着
-    expect(result.trip?.total_minutes).toBeGreaterThanOrEqual(270); // 4.5h
+    expect(result.trip?.total_minutes).toBe(300); // 5h（13:30-18:30 そのまま）
     expect(result.trip?.is_excluded).toBe(false);
   });
 });
@@ -245,29 +245,28 @@ describe("休日テスト（記録するが auto-excluded）", () => {
   });
 });
 
-describe("業務時間外テスト（業務時間外に5時間外出）→ Trip 0件", () => {
-  it("業務時間外（19:00-24:00）の OUT 滞在は除外される", () => {
+describe("業務時間フィルタ（完全業務時間外なら除外、少しでも重なれば全時間カウント）", () => {
+  it("業務時間外（19:00-23:59）の OUT 滞在は完全に除外される（重なりゼロ）", () => {
     const date = "2026-04-13";
     const stays = [
       makeStay(date, "09:00", "18:00", WORK.lat, WORK.lng),
-      makeStay(date, "19:00", "23:59", SHIBUYA.lat, SHIBUYA.lng), // 業務時間外
+      makeStay(date, "19:00", "23:59", SHIBUYA.lat, SHIBUYA.lng),
     ];
 
     const result = judgeTrip({ date, stays, setting: baseSetting });
     expect(result.trip).toBeNull();
   });
 
-  it("業務時間と部分的に重なる場合は重複部分のみカウント", () => {
+  it("業務時間と少しでも重なれば実滞在時間まるごとカウント（16:00-22:00 → 6h）", () => {
     const date = "2026-04-13";
-    // 16:00-22:00 に滞在 → 業務時間 16:00-18:00 = 2h overlap < 4h threshold → no trip
     const stays = [
       makeStay(date, "09:00", "15:00", WORK.lat, WORK.lng),
-      makeStay(date, "16:00", "22:00", SHIBUYA.lat, SHIBUYA.lng),
+      makeStay(date, "16:00", "22:00", SHIBUYA.lat, SHIBUYA.lng), // 6h、16:00-18:00 が業務時間と重なる
     ];
 
     const result = judgeTrip({ date, stays, setting: baseSetting });
-    expect(result.trip).toBeNull();
-    expect(result.skipReason).toBe("below_hours_threshold");
+    expect(result.trip).not.toBeNull();
+    expect(result.trip?.total_minutes).toBe(360); // 6h まるごと
   });
 });
 
@@ -285,9 +284,8 @@ describe("複数訪問先テスト（同一セット内）", () => {
 
     const result = judgeTrip({ date, stays, setting: baseSetting });
 
-    // 2h + 2h = 4h ちょうど = threshold 通過
     expect(result.trip).not.toBeNull();
-    expect(result.trip?.total_minutes).toBe(240);
+    expect(result.trip?.total_minutes).toBe(240); // 2h + 2h
     expect(result.longestOutSet?.length).toBe(2);
     expect(result.trip?.depart_ts).toBe(ts(date, "12:00"));
     expect(result.trip?.return_ts).toBe(ts(date, "19:00"));
@@ -305,7 +303,7 @@ describe("複数訪問先テスト（同一セット内）", () => {
 
     const result = judgeTrip({ date, stays, setting: baseSetting });
     expect(result.trip).not.toBeNull();
-    // 最長セット = セット1（5h、Shibuya 1点）
+    // 最長セット = セット1（5h）
     expect(result.trip?.total_minutes).toBe(300);
     expect(result.longestOutSet?.length).toBe(1);
     expect(result.trip?.depart_ts).toBe(ts(date, "09:30"));
@@ -330,16 +328,17 @@ describe("空配列・全 HOME・全 OUT エッジケース", () => {
     expect(result.trip).toBeNull();
   });
 
-  it("WORK が無く OUT 5h（直行直帰の出張日）→ Trip 1件", () => {
+  it("WORK が無く OUT 7h（直行直帰の出張日）→ Trip 1件", () => {
     const date = "2026-04-13";
     const stays = [
       makeStay(date, "07:00", "08:00", HOME.lat, HOME.lng),
-      makeStay(date, "09:30", "16:30", YOKOHAMA.lat, YOKOHAMA.lng), // 業務時間内 9:30-16:30 = 7h
+      makeStay(date, "09:30", "16:30", YOKOHAMA.lat, YOKOHAMA.lng), // 7h
       makeStay(date, "18:00", "23:00", HOME.lat, HOME.lng),
     ];
 
     const result = judgeTrip({ date, stays, setting: baseSetting });
     expect(result.trip).not.toBeNull();
+    expect(result.trip?.total_minutes).toBe(420); // 7h
     expect(result.trip?.depart_ts).toBe(ts(date, "08:00")); // HOME 退出
     expect(result.trip?.return_ts).toBe(ts(date, "18:00")); // HOME 到着
   });

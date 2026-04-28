@@ -197,22 +197,24 @@ function buildOutSets(
     if (c.area === "OUT") {
       // 通勤区間に含まれる場合は除外
       if (isCommuteIdx(i, commute)) continue;
-      // 業務時間内 overlap が 0 分なら除外
+      // 業務時間と少しでも重なるか判定（重ならなければ完全業務時間外なので除外）
       if (overlapMinutesWithBusinessHours(c, setting) <= 0) continue;
       current.push(c);
     }
-    // HOME は OUT セットを切らない（プラン §4 step 5 「WORK 滞在を挟まずに連続する」）
+    // HOME は OUT セットを切らない
   }
   if (current.length > 0) sets.push(current);
 
   return sets.map((set) => ({
     set,
-    totalMinutes: set.reduce(
-      (sum, s) => sum + overlapMinutesWithBusinessHours(s, setting),
-      0
-    ),
+    // 実滞在時間（クリップなし）。表示と閾値判定の両方に使う
+    totalMinutes: set.reduce((sum, s) => sum + fullStayMinutes(s), 0),
     maxDistanceKm: Math.max(...set.map((s) => s.distance_from_work_km)),
   }));
+}
+
+function fullStayMinutes(stay: LocationStay): number {
+  return (new Date(stay.ts_end).getTime() - new Date(stay.ts_start).getTime()) / 60000;
 }
 
 /**
