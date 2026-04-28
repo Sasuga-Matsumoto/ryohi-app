@@ -5,11 +5,12 @@
  * body: { date: 'YYYY-MM-DD' }
  */
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { judgeTrip } from "@/lib/judgment";
 import type { AccountSetting, LocationStay } from "@/types";
 
 export async function POST(request: NextRequest) {
+  // ユーザー認証は通常クライアントで
   const supabase = await createClient();
   const {
     data: { user },
@@ -17,6 +18,9 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "未ログイン" }, { status: 401 });
   }
+
+  // trips への書き込みは service_role 経由（RLS バイパス、システム生成扱い）
+  const sysSupabase = createServiceRoleClient();
 
   let body: { date?: string };
   try {
@@ -95,7 +99,7 @@ export async function POST(request: NextRequest) {
 
   if (!result.trip) {
     // 既存 Trip があれば削除（再判定で出張じゃなくなったケース）
-    await supabase
+    await sysSupabase
       .from("trips")
       .delete()
       .eq("account_id", user.id)
@@ -127,8 +131,8 @@ export async function POST(request: NextRequest) {
   );
   const dedupVisited = Array.from(new Set(visitedAreas));
 
-  // upsert
-  const { error: upsertErr } = await supabase.from("trips").upsert(
+  // upsert (service_role)
+  const { error: upsertErr } = await sysSupabase.from("trips").upsert(
     {
       account_id: user.id,
       date,
