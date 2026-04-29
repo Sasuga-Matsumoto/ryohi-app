@@ -24,10 +24,8 @@ export async function PUT(request: NextRequest) {
   const allowed = [
     "work_lat",
     "work_lng",
-    "work_radius_m",
     "home_lat",
     "home_lng",
-    "home_radius_m",
     "trip_definition_type",
     "trip_threshold_hours",
     "trip_threshold_km",
@@ -42,6 +40,10 @@ export async function PUT(request: NextRequest) {
   for (const key of allowed) {
     if (key in body) updates[key] = body[key];
   }
+
+  // 半径は強制で 100m（ユーザー編集不可）
+  updates.work_radius_m = 100;
+  updates.home_radius_m = 100;
 
   // upsert (account_id is primary key)
   const { error } = await supabase

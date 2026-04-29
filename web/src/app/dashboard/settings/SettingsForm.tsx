@@ -95,12 +95,11 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
           label="自宅"
           lat={s.home_lat}
           lng={s.home_lng}
-          radiusM={s.home_radius_m}
+          radiusM={100}
           onChange={(lat, lng) => {
             update("home_lat", lat);
             update("home_lng", lng);
           }}
-          onRadiusChange={(r) => update("home_radius_m", r)}
         />
       </section>
 
@@ -113,12 +112,11 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
           label="勤務地"
           lat={s.work_lat}
           lng={s.work_lng}
-          radiusM={s.work_radius_m}
+          radiusM={100}
           onChange={(lat, lng) => {
             update("work_lat", lat);
             update("work_lng", lng);
           }}
-          onRadiusChange={(r) => update("work_radius_m", r)}
         />
       </section>
 
