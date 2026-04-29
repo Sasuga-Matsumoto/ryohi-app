@@ -3,6 +3,7 @@
  */
 import * as Location from "expo-location";
 import * as BackgroundFetch from "expo-background-fetch";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
 import {
   TASK_GEOFENCE,
@@ -10,6 +11,8 @@ import {
   FLUSH_INTERVAL_SEC,
 } from "./config";
 import { defineTasks } from "./tasks";
+
+const LAST_REGISTERED_KEY = "last_registered_settings";
 
 export interface AccountSetting {
   account_id: string;
@@ -19,6 +22,24 @@ export interface AccountSetting {
   home_lat: number | null;
   home_lng: number | null;
   home_radius_m: number;
+}
+
+/**
+ * 現在の許可状態を取得する（ダイアログを出さない・チェック専用）
+ */
+export async function getCurrentLocationPermissions(): Promise<{
+  foreground: boolean;
+  background: boolean;
+}> {
+  const fg = await Location.getForegroundPermissionsAsync();
+  if (fg.status !== "granted") {
+    return { foreground: false, background: false };
+  }
+  const bg = await Location.getBackgroundPermissionsAsync();
+  return {
+    foreground: true,
+    background: bg.status === "granted",
+  };
 }
 
 /**
@@ -82,7 +103,7 @@ export async function registerGeofence(setting: AccountSetting): Promise<boolean
       identifier: "home",
       latitude: setting.home_lat,
       longitude: setting.home_lng,
-      radius: Math.max(setting.home_radius_m, 50), // OS の最小値配慮
+      radius: Math.max(setting.home_radius_m, 50),
       notifyOnEnter: true,
       notifyOnExit: true,
     },
@@ -96,7 +117,39 @@ export async function registerGeofence(setting: AccountSetting): Promise<boolean
     },
   ]);
 
+  await AsyncStorage.setItem(LAST_REGISTERED_KEY, JSON.stringify(setting));
   return true;
+}
+
+/**
+ * 直前に Geofence 登録した設定を返す（差分検知用）
+ */
+export async function loadLastRegisteredSetting(): Promise<AccountSetting | null> {
+  const raw = await AsyncStorage.getItem(LAST_REGISTERED_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Web の最新設定と直前登録分を比較
+ */
+export function hasSettingChanged(
+  latest: AccountSetting,
+  cached: AccountSetting | null,
+): boolean {
+  if (!cached) return true;
+  return (
+    latest.work_lat !== cached.work_lat ||
+    latest.work_lng !== cached.work_lng ||
+    latest.work_radius_m !== cached.work_radius_m ||
+    latest.home_lat !== cached.home_lat ||
+    latest.home_lng !== cached.home_lng ||
+    latest.home_radius_m !== cached.home_radius_m
+  );
 }
 
 /**

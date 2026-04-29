@@ -7,90 +7,126 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  Linking,
 } from "react-native";
+import * as Location from "expo-location";
 import { supabase } from "../lib/supabase";
 import {
   fetchMySettings,
   registerGeofence,
   registerFlushTask,
   requestLocationPermissions,
+  getCurrentLocationPermissions,
+  loadLastRegisteredSetting,
+  hasSettingChanged,
   tearDownTracking,
   type AccountSetting,
 } from "../lib/location";
 import { pendingCount } from "../lib/queue";
-import { flushQueue } from "../lib/sync";
 import { defineTasks } from "../lib/tasks";
 
+const WEB_BASE_URL = "https://ryohi-app.vercel.app";
+const WEB_SETTINGS_PATH = "/dashboard/settings";
+
+type Status =
+  | "loading"
+  | "services_off"
+  | "no_permission"
+  | "fg_only"
+  | "no_setting"
+  | "ready";
+
 export default function HomeScreen({ session }: { session: any }) {
+  const [status, setStatus] = useState<Status>("loading");
   const [setting, setSetting] = useState<AccountSetting | null>(null);
-  const [permGranted, setPermGranted] = useState({ foreground: false, background: false });
   const [pending, setPending] = useState({ tracks: 0, stays: 0 });
   const [refreshing, setRefreshing] = useState(false);
-  const [statusMsg, setStatusMsg] = useState<string>("");
 
-  const loadStatus = useCallback(async () => {
+  const init = useCallback(async () => {
+    defineTasks();
+
+    const servicesOn = await Location.hasServicesEnabledAsync();
+    if (!servicesOn) {
+      setStatus("services_off");
+      return;
+    }
+
+    const perms = await getCurrentLocationPermissions();
+    if (!perms.foreground) {
+      setStatus("no_permission");
+      return;
+    }
+    if (!perms.background) {
+      setStatus("fg_only");
+      return;
+    }
+
     const s = await fetchMySettings();
     setSetting(s);
+    if (!s || s.home_lat == null || s.work_lat == null) {
+      setStatus("no_setting");
+      return;
+    }
+
+    const cached = await loadLastRegisteredSetting();
+    if (hasSettingChanged(s, cached)) {
+      try {
+        await registerGeofence(s);
+        await registerFlushTask();
+      } catch (e) {
+        console.warn("[home] auto-register failed", e);
+      }
+    }
+
     const p = await pendingCount();
     setPending(p);
+    setStatus("ready");
   }, []);
 
   useEffect(() => {
-    defineTasks();
-    loadStatus();
-  }, [loadStatus]);
+    init();
+  }, [init]);
 
   const handleSetup = async () => {
-    setStatusMsg("位置情報の許可を要求中...");
     const perm = await requestLocationPermissions();
-    setPermGranted(perm);
     if (!perm.foreground) {
-      setStatusMsg("");
-      Alert.alert("許可が必要", "位置情報の許可を端末設定から有効にしてください。");
-      return;
-    }
-
-    const s = await fetchMySettings();
-    if (!s) {
-      setStatusMsg("");
       Alert.alert(
-        "設定が必要",
-        "Web から自宅・勤務地の設定を完了してから、このアプリを再度開いてください。\n\nhttps://ryohi-app.vercel.app/dashboard/settings"
+        "位置情報の許可が必要",
+        "「設定アプリを開く」から位置情報を許可してください",
+        [
+          { text: "キャンセル", style: "cancel" },
+          { text: "設定を開く", onPress: () => Linking.openSettings() },
+        ],
       );
       return;
     }
-
-    if (s.work_lat == null || s.home_lat == null) {
-      setStatusMsg("");
+    if (!perm.background) {
       Alert.alert(
-        "設定が未完了",
-        "Web で自宅・勤務地の Pin を設定してから再度開いてください。"
+        "「常に許可」が必要",
+        "アプリを閉じても自動記録するため、設定で「常に許可」を選んでください",
+        [
+          { text: "キャンセル", style: "cancel" },
+          { text: "設定を開く", onPress: () => Linking.openSettings() },
+        ],
       );
       return;
     }
-
-    setStatusMsg("Geofence を登録中...");
-    const ok = await registerGeofence(s);
-    if (!ok) {
-      setStatusMsg("");
-      Alert.alert("エラー", "Geofence 登録に失敗しました。");
-      return;
-    }
-
-    setStatusMsg("送信タスクを登録中...");
-    await registerFlushTask();
-
-    setStatusMsg("");
-    setSetting(s);
-    Alert.alert("✓ 自動記録を開始しました", "勤務地・自宅エリアを出ると自動でGPS記録が始まります。");
+    init();
   };
 
-  const handleManualFlush = async () => {
-    setStatusMsg("送信中...");
-    const r = await flushQueue();
-    setStatusMsg("");
-    Alert.alert("送信完了", `tracks ${r.sentTracks} 件 / stays ${r.sentStays} 件`);
-    loadStatus();
+  const handleOpenWebSettings = async () => {
+    // 自動ログインを通すため、現在の access/refresh トークンを hash 部に乗せる
+    const { data: { session: cur } } = await supabase.auth.getSession();
+    if (cur?.access_token && cur?.refresh_token) {
+      const url =
+        `${WEB_BASE_URL}/auth/from-mobile` +
+        `#access_token=${encodeURIComponent(cur.access_token)}` +
+        `&refresh_token=${encodeURIComponent(cur.refresh_token)}` +
+        `&next=${encodeURIComponent(WEB_SETTINGS_PATH)}`;
+      await Linking.openURL(url);
+    } else {
+      await Linking.openURL(`${WEB_BASE_URL}${WEB_SETTINGS_PATH}`);
+    }
   };
 
   const handleSignOut = async () => {
@@ -100,11 +136,9 @@ export default function HomeScreen({ session }: { session: any }) {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadStatus();
+    await init();
     setRefreshing(false);
   };
-
-  const onboarded = setting?.work_lat != null && setting?.home_lat != null;
 
   return (
     <ScrollView
@@ -117,58 +151,96 @@ export default function HomeScreen({ session }: { session: any }) {
         <Text style={styles.email}>{session?.user?.email ?? ""}</Text>
       </View>
 
-      {!onboarded && (
+      {status === "services_off" && (
         <View style={styles.warningCard}>
-          <Text style={styles.warningTitle}>⚠ 初期設定が未完了です</Text>
+          <Text style={styles.warningTitle}>端末の位置情報が OFF です</Text>
           <Text style={styles.warningBody}>
-            Web で自宅・勤務地・出張定義を設定してください。
+            通知バーを下にスワイプ →「位置情報」アイコンをタップして ON にしてください。
           </Text>
-          <Text style={styles.warningLink}>
-            https://ryohi-app.vercel.app/dashboard/settings
+        </View>
+      )}
+
+      {status === "no_permission" && (
+        <View style={styles.warningCard}>
+          <Text style={styles.warningTitle}>初期セットアップが必要です</Text>
+          <Text style={styles.warningBody}>
+            位置情報の許可をしてください。「常に許可」を選ぶと、アプリを閉じている時も自動記録されます。
           </Text>
+          <TouchableOpacity onPress={handleSetup} style={styles.warningButton}>
+            <Text style={styles.warningButtonText}>セットアップ開始</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {status === "fg_only" && (
+        <View style={styles.warningCard}>
+          <Text style={styles.warningTitle}>「常に許可」が必要です</Text>
+          <Text style={styles.warningBody}>
+            「使用中のみ」では出張ログを記録できません。設定アプリで「常に許可」を選んでください。
+          </Text>
+          <TouchableOpacity
+            onPress={() => Linking.openSettings()}
+            style={styles.warningButton}
+          >
+            <Text style={styles.warningButtonText}>設定アプリを開く</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {status === "no_setting" && (
+        <View style={styles.warningCard}>
+          <Text style={styles.warningTitle}>自宅・勤務地の設定が必要です</Text>
+          <Text style={styles.warningBody}>
+            Web の設定画面で自宅と勤務地のエリアを地図上で指定してください（半径100m）。設定後、このアプリに戻って画面を下に引いて更新すると反映されます。
+          </Text>
+          <TouchableOpacity
+            onPress={handleOpenWebSettings}
+            style={styles.warningButton}
+          >
+            <Text style={styles.warningButtonText}>Web の設定画面を開く</Text>
+          </TouchableOpacity>
         </View>
       )}
 
       <View style={styles.statusCard}>
         <Text style={styles.statusLabel}>記録状態</Text>
         <Text style={styles.statusValue}>
-          {permGranted.background ? "✓ 自動記録中" : "未開始"}
+          {status === "ready" ? "✓ 自動記録中" : "未開始"}
         </Text>
       </View>
 
-      <View style={styles.row}>
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>未送信 tracks</Text>
-          <Text style={styles.kpiValue}>{pending.tracks}</Text>
-        </View>
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>未送信 stays</Text>
-          <Text style={styles.kpiValue}>{pending.stays}</Text>
-        </View>
-      </View>
+      {status === "ready" && (
+        <>
+          <View style={styles.row}>
+            <View style={styles.kpiCard}>
+              <Text style={styles.kpiLabel}>未送信 tracks</Text>
+              <Text style={styles.kpiValue}>{pending.tracks}</Text>
+            </View>
+            <View style={styles.kpiCard}>
+              <Text style={styles.kpiLabel}>未送信 stays</Text>
+              <Text style={styles.kpiValue}>{pending.stays}</Text>
+            </View>
+          </View>
 
-      <TouchableOpacity onPress={handleSetup} style={styles.primaryButton}>
-        <Text style={styles.primaryButtonText}>
-          {permGranted.background ? "Geofence を再登録" : "自動記録を開始"}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={handleManualFlush} style={styles.secondaryButton}>
-        <Text style={styles.secondaryButtonText}>未送信データを手動送信</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleOpenWebSettings}
+            style={styles.settingsButton}
+          >
+            <Text style={styles.settingsButtonText}>Web の設定画面を開く</Text>
+          </TouchableOpacity>
+        </>
+      )}
 
       <TouchableOpacity onPress={handleSignOut} style={styles.linkButton}>
         <Text style={styles.linkText}>ログアウト</Text>
       </TouchableOpacity>
-
-      {statusMsg ? <Text style={styles.statusMsg}>{statusMsg}</Text> : null}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F4F6FB" },
-  content: { padding: 20 },
+  content: { padding: 20, paddingTop: 60 },
   header: { marginBottom: 24 },
   brand: { fontSize: 22, fontWeight: "700", color: "#1E3A8A" },
   email: { fontSize: 13, color: "#64748B", marginTop: 4 },
@@ -181,8 +253,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   warningTitle: { fontSize: 14, fontWeight: "700", color: "#92400E" },
-  warningBody: { fontSize: 13, color: "#78350F", marginTop: 4 },
-  warningLink: { fontSize: 12, color: "#3366FF", marginTop: 6 },
+  warningBody: {
+    fontSize: 13,
+    color: "#78350F",
+    marginTop: 4,
+    lineHeight: 19,
+  },
+  warningButton: {
+    backgroundColor: "#3366FF",
+    height: 40,
+    borderRadius: 6,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 12,
+  },
+  warningButtonText: { color: "#fff", fontSize: 14, fontWeight: "600" },
   statusCard: {
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -200,16 +285,7 @@ const styles = StyleSheet.create({
   },
   kpiLabel: { fontSize: 11, color: "#64748B" },
   kpiValue: { fontSize: 20, fontWeight: "700", color: "#0F172A", marginTop: 4 },
-  primaryButton: {
-    backgroundColor: "#3366FF",
-    borderRadius: 8,
-    height: 48,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  primaryButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  secondaryButton: {
+  settingsButton: {
     backgroundColor: "#fff",
     borderColor: "#D1D5DB",
     borderWidth: 1,
@@ -219,13 +295,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  secondaryButtonText: { color: "#1E3A8A", fontSize: 14, fontWeight: "500" },
-  linkButton: { alignSelf: "center", paddingVertical: 8 },
+  settingsButtonText: { color: "#1E3A8A", fontSize: 14, fontWeight: "500" },
+  linkButton: { alignSelf: "center", paddingVertical: 8, marginTop: 8 },
   linkText: { color: "#64748B", fontSize: 13 },
-  statusMsg: {
-    marginTop: 16,
-    textAlign: "center",
-    color: "#3366FF",
-    fontSize: 13,
-  },
 });

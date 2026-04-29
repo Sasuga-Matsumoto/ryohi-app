@@ -20,7 +20,14 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "出張記録のため、常に位置情報が必要です。業務時間外でも勤務地・自宅の出入りだけ検知します。",
         "NSLocationAlwaysUsageDescription": "出張記録のため、常に位置情報が必要です。",
         "NSLocationWhenInUseUsageDescription": "出張記録のため、位置情報が必要です。",
-        "UIBackgroundModes": ["location", "fetch", "processing"]
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "processing",
+          "location",
+          "fetch",
+          "processing"
+        ]
       }
     },
     "android": {
@@ -38,7 +45,28 @@
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_LOCATION",
         "WAKE_LOCK",
-        "RECEIVE_BOOT_COMPLETED"
+        "RECEIVE_BOOT_COMPLETED",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.WAKE_LOCK",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "WAKE_LOCK",
+        "RECEIVE_BOOT_COMPLETED",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.WAKE_LOCK"
       ]
     },
     "web": {
@@ -66,8 +94,15 @@
     ],
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "d3de8250-36a4-406d-933e-c626b05abf51"
       }
+    },
+    "owner": "sasuga",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d3de8250-36a4-406d-933e-c626b05abf51"
     }
   }
 }

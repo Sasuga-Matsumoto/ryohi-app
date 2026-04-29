@@ -98,7 +98,7 @@ create policy "Users can read own evidence"
 ### Step 5: 動作確認
 
 ```bash
-cd "C:\Users\matsu\plex\ryohi\アウトプット\ryohi-app\web"
+cd "C:\Users\matsu\plex\ryohi\output\ryohi-app\web"
 npm run dev
 ```
 
