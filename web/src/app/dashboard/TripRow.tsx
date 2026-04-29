@@ -207,7 +207,7 @@ export default function TripRow({ trip }: { trip: TripRowData }) {
           <td colSpan={8}>
             <div className="row" style={{ gap: "var(--space-2)" }}>
               <span className="text-sm">
-                この Trip を出張から除外しますか？理由（任意）:
+                この出張を除外しますか？理由（任意）:
               </span>
               <input
                 type="text"

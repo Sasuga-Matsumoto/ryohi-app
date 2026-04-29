@@ -117,11 +117,11 @@ export default function DevControls({ workLat, workLng, homeLat, homeLng }: Prop
       : "";
     if (judged.trip) {
       setMessage(
-        `✓ 投入 ${injected.inserted} 件${trackInfo} / Trip 生成 (${(judged.trip.total_minutes / 60).toFixed(1)}h, ${judged.trip.max_distance_km}km)`
+        `✓ 投入 ${injected.inserted} 件${trackInfo} / 出張生成 (${(judged.trip.total_minutes / 60).toFixed(1)}h, ${judged.trip.max_distance_km}km)`
       );
     } else {
       setMessage(
-        `✓ 投入 ${injected.inserted} 件${trackInfo} / Trip 生成なし: ${judged.skipReason ?? "?"}`
+        `✓ 投入 ${injected.inserted} 件${trackInfo} / 出張生成なし: ${judged.skipReason ?? "?"}`
       );
     }
     setLoading(false);
@@ -149,10 +149,10 @@ export default function DevControls({ workLat, workLng, homeLat, homeLng }: Prop
             className="input"
             style={{ width: 280 }}
           >
-            <option value="trip5h">出張5h（渋谷 / Trip 生成想定）</option>
-            <option value="trip3h">出張3h（閾値未満 / Trip なし想定）</option>
-            <option value="commute">通勤のみ（Trip なし想定）</option>
-            <option value="tsukuba">遠地55km（つくば / 距離モードで Trip）</option>
+            <option value="trip5h">出張5h（渋谷 / 出張生成想定）</option>
+            <option value="trip3h">出張3h（閾値未満 / 出張なし想定）</option>
+            <option value="commute">通勤のみ（出張なし想定）</option>
+            <option value="tsukuba">遠地55km（つくば / 距離モードで出張）</option>
             <option value="weekend">休日外出（include_holidays=false で除外想定）</option>
           </select>
         </label>

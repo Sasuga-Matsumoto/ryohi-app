@@ -32,7 +32,7 @@ export default async function TripDetailPage({
         <div className="card" style={{ maxWidth: 560, margin: "0 auto" }}>
           <h1 className="page-title">出張が見つかりません</h1>
           <p className="text-light" style={{ marginTop: "var(--space-3)" }}>
-            該当 ID の Trip がないか、アクセス権がありません。
+            該当 ID の出張がないか、アクセス権がありません。
           </p>
           <a
             href="/dashboard"

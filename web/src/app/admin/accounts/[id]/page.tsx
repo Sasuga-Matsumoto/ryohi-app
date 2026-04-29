@@ -144,9 +144,9 @@ export default async function AccountDetailPage({
             >
               <dt style={{ color: "var(--text-light)" }}>オンボーディング</dt>
               <dd>{onboarded ? "✓ 完了" : "未完了"}</dd>
-              <dt style={{ color: "var(--text-light)" }}>当月 Trip</dt>
+              <dt style={{ color: "var(--text-light)" }}>当月の出張</dt>
               <dd>{monthTripCount ?? 0} 件</dd>
-              <dt style={{ color: "var(--text-light)" }}>累計 Trip</dt>
+              <dt style={{ color: "var(--text-light)" }}>累計の出張</dt>
               <dd>{totalTripCount ?? 0} 件</dd>
               {setting && (
                 <>

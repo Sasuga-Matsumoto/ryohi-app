@@ -176,7 +176,7 @@ export default async function DashboardPage() {
       <section style={{ marginBottom: "var(--space-6)" }}>
         <div className="card" style={{ padding: 0 }}>
           <div className="card-header">
-            <span>{ymLabel}の Trip 一覧</span>
+            <span>{ymLabel}の出張一覧</span>
             <span className="text-muted text-xs">
               {monthTrips?.length ?? 0} 件（除外含む）
             </span>
@@ -215,7 +215,7 @@ export default async function DashboardPage() {
                   color: "var(--text-muted)",
                 }}
               >
-                <p>{ymLabel}の Trip はまだありません。</p>
+                <p>{ymLabel}の出張はまだありません。</p>
                 {!onboarded && (
                   <p style={{ marginTop: "var(--space-2)" }}>
                     先に

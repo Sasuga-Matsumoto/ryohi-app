@@ -84,7 +84,7 @@ export async function PATCH(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   if (!data) {
-    return NextResponse.json({ error: "Trip が見つかりません" }, { status: 404 });
+    return NextResponse.json({ error: "出張が見つかりません" }, { status: 404 });
   }
 
   return NextResponse.json({ ok: true, trip: data });

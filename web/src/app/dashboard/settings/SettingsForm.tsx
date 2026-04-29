@@ -255,7 +255,7 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
           <FileTextIcon size={18} /> デフォルト目的
         </h2>
         <p className="helper" style={{ marginBottom: "var(--space-3)" }}>
-          自動判定された Trip の「目的」列の初期値（後から個別編集できます）
+          自動判定された出張の「目的」列の初期値（後から個別編集できます）
         </p>
         <input
           type="text"
