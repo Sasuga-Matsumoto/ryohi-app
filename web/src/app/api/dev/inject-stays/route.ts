@@ -136,14 +136,15 @@ export async function POST(request: NextRequest) {
  * 滞在ノード列を受け取り、200m 間隔で経路点を生成する（デモ用に往復で異なる経路）
  *
  * - 各滞在内: ts_start と ts_end の2点を打つ（中心座標）
- * - 滞在間: 200m 間隔で補間しつつ、segment ごとに進行方向の右/左へ
- *           交互に正弦曲線でずらす（=往復で異なる経路として可視化）
+ * - 滞在間: 200m 間隔で補間しつつ、進行方向の左側へ正弦曲線でずらす
  *
- * 例: 自宅 → 勤務地 → 渋谷 → 勤務地 → 自宅 の場合、
- *   segment 0 (自宅→勤務地): 右に膨らむ
- *   segment 1 (勤務地→渋谷): 左に膨らむ
- *   segment 2 (渋谷→勤務地): 右に膨らむ ← 帰り（segment 1 と逆）
- *   segment 3 (勤務地→自宅): 左に膨らむ ← 帰宅（segment 0 と逆）
+ * 仕組み: 「進行方向の左側」（perp = (-dLng, dLat)）に常に膨らませる。
+ *   行き (A→B) と帰り (B→A) では進行方向が逆になり、左側も逆向きになるため、
+ *   同じ A-B 区間でも自動的に左右反対側に膨らみ、別経路として可視化される。
+ *
+ * 例: 勤務地 → 渋谷 → 勤務地 の場合、
+ *   行き（勤務地→渋谷）: 進行方向の左 = 北西側に膨らむ
+ *   帰り（渋谷→勤務地）: 進行方向の左 = 南東側に膨らむ
  */
 function generateInterpolatedTracks(
   stays: StayInput[]
@@ -169,23 +170,18 @@ function generateInterpolatedTracks(
       const dLng = next.lng - s.lng;
       const segLenDeg = Math.sqrt(dLat * dLat + dLng * dLng);
       const distKm = haversineKm(s.lat, s.lng, next.lat, next.lng);
-      // 200m間隔
       const numPoints = Math.max(0, Math.floor(distKm / 0.2) - 1);
       const startTs = new Date(s.ts_end).getTime();
       const endTs = new Date(next.ts_start).getTime();
 
-      // 進行方向に対する垂直ベクトル（正規化）
-      // 右手系: (dLat, dLng) を時計回りに 90度回した (-dLng, dLat)
+      // 進行方向に対する左側ベクトル（正規化）: (dLat, dLng) を反時計回りに 90度回す = (-dLng, dLat)
       const perpLat = segLenDeg > 0 ? -dLng / segLenDeg : 0;
       const perpLng = segLenDeg > 0 ? dLat / segLenDeg : 0;
 
-      // 偶数 segment は右、奇数 segment は左
-      const curveSign = i % 2 === 0 ? 1 : -1;
-
       for (let k = 1; k <= numPoints; k++) {
         const ratio = k / (numPoints + 1);
-        // 中点で最大の正弦曲線オフセット
-        const offsetDeg = curveSign * CURVE_PEAK_DEG * Math.sin(Math.PI * ratio);
+        // 中点で最大の正弦曲線オフセット（常に進行方向の左側）
+        const offsetDeg = CURVE_PEAK_DEG * Math.sin(Math.PI * ratio);
         const lat = s.lat + dLat * ratio + perpLat * offsetDeg;
         const lng = s.lng + dLng * ratio + perpLng * offsetDeg;
         const ts = new Date(startTs + (endTs - startTs) * ratio).toISOString();
