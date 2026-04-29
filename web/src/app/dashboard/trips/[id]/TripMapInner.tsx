@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -8,6 +9,7 @@ import {
   CircleMarker,
   Polyline,
   Popup,
+  useMap,
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -166,23 +168,54 @@ type Props = {
   tracks: Array<{ ts: string; lat: number; lng: number }>;
 };
 
-export default function TripMapInner({ work, home, visitedStays, tracks }: Props) {
-  const allPoints: LatLng[] = [
-    ...(work ? [{ lat: work.lat, lng: work.lng }] : []),
-    ...(home ? [{ lat: home.lat, lng: home.lng }] : []),
-    ...visitedStays,
-    ...tracks,
-  ];
+/**
+ * 全ての関連点を含む bounds に自動ズーム
+ */
+function FitBoundsOnMount({
+  points,
+}: {
+  points: Array<[number, number]>;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    if (points.length === 0) return;
+    const bounds = L.latLngBounds(points);
+    if (!bounds.isValid()) return;
+    if (points.length === 1) {
+      // 単一点なら少し離して表示
+      map.setView(points[0], 15);
+    } else {
+      map.fitBounds(bounds, {
+        padding: [40, 40],
+        maxZoom: 16,
+      });
+    }
+    // 初回マウント時のみ実行（ユーザーがズームした後は維持）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map]);
+  return null;
+}
 
-  const center =
-    allPoints.length > 0
-      ? {
-          lat:
-            allPoints.reduce((sum, p) => sum + p.lat, 0) / allPoints.length,
-          lng:
-            allPoints.reduce((sum, p) => sum + p.lng, 0) / allPoints.length,
-        }
-      : { lat: 35.681, lng: 139.766 };
+export default function TripMapInner({ work, home, visitedStays, tracks }: Props) {
+  const allPoints: LatLng[] = useMemo(
+    () => [
+      ...(work ? [{ lat: work.lat, lng: work.lng }] : []),
+      ...(home ? [{ lat: home.lat, lng: home.lng }] : []),
+      ...visitedStays,
+      ...tracks,
+    ],
+    [work, home, visitedStays, tracks]
+  );
+
+  // bounds の入力（[lat, lng] のタプル配列）
+  const boundsPoints = useMemo<Array<[number, number]>>(
+    () => allPoints.map((p) => [p.lat, p.lng]),
+    [allPoints]
+  );
+
+  // 初期 center は適当（fitBounds で上書きされる）
+  const initialCenter: [number, number] =
+    allPoints.length > 0 ? [allPoints[0].lat, allPoints[0].lng] : [35.681, 139.766];
 
   const polylinePositions: [number, number][] = tracks.map((t) => [t.lat, t.lng]);
   const kmMilestones = pickKmMilestones(tracks);
@@ -198,8 +231,8 @@ export default function TripMapInner({ work, home, visitedStays, tracks }: Props
       }}
     >
       <MapContainer
-        center={[center.lat, center.lng]}
-        zoom={11}
+        center={initialCenter}
+        zoom={13}
         scrollWheelZoom={true}
         style={{ height: "100%", width: "100%" }}
       >
@@ -207,6 +240,7 @@ export default function TripMapInner({ work, home, visitedStays, tracks }: Props
           attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        <FitBoundsOnMount points={boundsPoints} />
 
         {/* 経路 Polyline（赤い線） */}
         {polylinePositions.length >= 2 && (
