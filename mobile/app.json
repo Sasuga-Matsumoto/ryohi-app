@@ -1,0 +1,73 @@
+{
+  "expo": {
+    "name": "PLEX 出張ログ",
+    "slug": "plex-shucho-log",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "ryohi",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1E3A8A"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.plex.shuchologu",
+      "infoPlist": {
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "出張記録のため、常に位置情報が必要です。業務時間外でも勤務地・自宅の出入りだけ検知します。",
+        "NSLocationAlwaysUsageDescription": "出張記録のため、常に位置情報が必要です。",
+        "NSLocationWhenInUseUsageDescription": "出張記録のため、位置情報が必要です。",
+        "UIBackgroundModes": ["location", "fetch", "processing"]
+      }
+    },
+    "android": {
+      "package": "com.plex.shuchologu",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1E3A8A"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "WAKE_LOCK",
+        "RECEIVE_BOOT_COMPLETED"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-sqlite",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "出張記録のため、常に位置情報が必要です。",
+          "locationAlwaysPermission": "出張記録のため、常に位置情報が必要です。",
+          "locationWhenInUsePermission": "出張記録のため、位置情報が必要です。",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-background-fetch",
+        {
+          "minimumInterval": 3600
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    }
+  }
+}
