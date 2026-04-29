@@ -9,11 +9,14 @@
 
 type NominatimAddress = {
   // Japan address fields. Nominatim でデータによりキーが揺れる
+  // 細かい順
+  neighbourhood?: string; // 字・小字
+  quarter?: string; // 大字・町域（道玄坂等）
+  suburb?: string; // 地区/区
   ward?: string; // 区
   city_district?: string; // 区
-  suburb?: string; // 地区/区
-  city?: string; // 市
   town?: string; // 町
+  city?: string; // 市
   village?: string; // 村
   state?: string; // 都道府県
   country?: string;
@@ -53,7 +56,7 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string |
   url.searchParams.set("format", "json");
   url.searchParams.set("lat", String(lat));
   url.searchParams.set("lon", String(lng));
-  url.searchParams.set("zoom", "12"); // 市区町村レベル
+  url.searchParams.set("zoom", "16"); // 町名レベル
   url.searchParams.set("accept-language", "ja");
   url.searchParams.set("addressdetails", "1");
 
@@ -80,42 +83,47 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string |
 }
 
 /**
- * Nominatim レスポンスから市区町村レベルの日本語ラベルを抽出
+ * Nominatim レスポンスから町名レベルの日本語ラベルを抽出
  * 例:
- *   渋谷区: { suburb: "渋谷区", city: "東京都", state: "東京都" }
+ *   渋谷区道玄坂: { quarter: "道玄坂", suburb: "渋谷区", city: "東京都" }
+ *     → "渋谷区道玄坂"
+ *   横浜市西区南幸: { quarter: "南幸", suburb: "西区", city: "横浜市" }
+ *     → "横浜市西区南幸"
+ *   町名情報なし: { suburb: "渋谷区", city: "東京都" }
  *     → "渋谷区"
- *   横浜市西区: { suburb: "西区", city: "横浜市", state: "神奈川県" }
- *     → "横浜市西区"
- *   千葉市中央区: { suburb: "中央区", city: "千葉市" }
- *     → "千葉市中央区"
- *   一般市: { city: "つくば市" }
- *     → "つくば市"
+ *   一般市: { city: "つくば市", neighbourhood: "竹園" }
+ *     → "つくば市竹園"
  */
 function extractCityWardLabel(data: NominatimResponse): string | null {
   const a = data.address ?? {};
 
-  // 区の抽出（複数フィールド優先順）
+  // 町名（細かい順に拾う）
+  const neighborhood = a.quarter || a.neighbourhood || null;
+  // 区（複数フィールド優先順）
   const ward = a.ward || a.city_district || matchesWardSuffix(a.suburb);
   // 市町村
   const city = a.city || a.town || a.village;
 
-  // 区がある場合
-  if (ward) {
-    // 政令指定都市: city が「横浜市」「千葉市」など末尾「市」 → 結合
-    if (city && /市$/.test(city) && city !== ward) {
-      return `${city}${ward}`;
-    }
-    // 東京都の特別区など、city が都道府県名の場合は ward 単独
-    return ward;
+  // 政令指定都市（横浜市・千葉市等）: 市+区+町名
+  if (city && /市$/.test(city) && ward) {
+    return neighborhood ? `${city}${ward}${neighborhood}` : `${city}${ward}`;
   }
 
-  if (city) return city;
+  // 東京都特別区: 区+町名（city は都道府県名なので使わない）
+  if (ward) {
+    return neighborhood ? `${ward}${neighborhood}` : ward;
+  }
 
-  // フォールバック: display_name から雑に切り出し
+  // 一般市町村: 市+町名
+  if (city) {
+    return neighborhood ? `${city}${neighborhood}` : city;
+  }
+
+  // フォールバック
+  if (neighborhood) return neighborhood;
   if (data.display_name) {
     return data.display_name.split(",")[0]?.trim() ?? null;
   }
-
   return null;
 }
 

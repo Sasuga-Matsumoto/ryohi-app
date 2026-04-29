@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   url.searchParams.set("format", "json");
   url.searchParams.set("lat", String(lat));
   url.searchParams.set("lon", String(lng));
-  url.searchParams.set("zoom", "12"); // 市区町村レベル
+  url.searchParams.set("zoom", "16"); // 町名レベル
   url.searchParams.set("accept-language", "ja");
 
   const res = await fetch(url.toString(), {

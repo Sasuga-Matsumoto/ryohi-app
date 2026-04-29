@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import TripDetailMap from "./TripDetailMap";
 import TripDetailActions from "./TripDetailActions";
 import { ArrowLeftIcon, MapPinIcon, RouteIcon, ListIcon } from "@/components/Icon";
+import { reverseGeocodeStays } from "@/lib/geocoding";
 
 export default async function TripDetailPage({
   params,
@@ -92,6 +93,11 @@ export default async function TripDetailPage({
     const inHome = distHome * 1000 <= setting.home_radius_m;
     return !inWork && !inHome;
   });
+
+  // 滞在ノードを逆ジオコーディング（町名レベル）。Nominatim 1req/secのため数件想定
+  const visitedLabels = await reverseGeocodeStays(
+    visitedStays.map((s) => ({ lat: s.lat, lng: s.lng }))
+  );
 
   const departTime = formatHHMM(trip.depart_ts);
   const returnTime = formatHHMM(trip.return_ts);
@@ -199,7 +205,7 @@ export default async function TripDetailPage({
           }))}
         />
         <p className="helper" style={{ marginTop: "var(--space-2)" }}>
-          勤務地（青円） / 自宅（緑円） / 滞在ノード（赤丸） / 200m間隔の経路点（小円）
+          勤務地（青円） / 自宅（緑円） / 200m移動（赤丸・小） / 1kmごと（赤ピン） / 滞在ノード（赤丸・大）
         </p>
       </section>
 
@@ -209,21 +215,39 @@ export default async function TripDetailPage({
           <MapPinIcon size={18} /> 滞在ノード（30分以上同地点）
         </h2>
         {visitedStays.length === 0 ? (
-          <p style={{ color: "var(--text-light)" }}>該当する滞在ノードがありません</p>
+          <p className="text-light">該当する滞在ノードがありません</p>
         ) : (
-          <ul style={{ listStyle: "none", padding: 0, lineHeight: 1.9 }}>
+          <ul style={{ listStyle: "none", padding: 0 }}>
             {visitedStays.map((s, i) => {
               const start = formatHHMM(s.ts_start);
               const end = formatHHMM(s.ts_end);
               const minutes =
                 (new Date(s.ts_end).getTime() - new Date(s.ts_start).getTime()) /
                 60000;
+              const label = visitedLabels[i] ?? `(${s.lat.toFixed(4)}, ${s.lng.toFixed(4)})`;
               return (
-                <li key={i} style={{ fontSize: "0.9rem" }}>
-                  • <strong>{start}-{end}</strong>{" "}
-                  ({s.lat.toFixed(4)}, {s.lng.toFixed(4)}){" "}
-                  <span style={{ color: "var(--text-light)" }}>
-                    滞在 {Math.round(minutes)}分
+                <li
+                  key={i}
+                  style={{
+                    padding: "var(--space-3) 0",
+                    borderTop: i > 0 ? "1px solid var(--border)" : "none",
+                    display: "flex",
+                    gap: "var(--space-3)",
+                    alignItems: "baseline",
+                    fontSize: "var(--text-sm)",
+                  }}
+                >
+                  <span className="tabular text-muted" style={{ width: 90, flexShrink: 0 }}>
+                    {start}-{end}
+                  </span>
+                  <span style={{ flex: 1 }}>
+                    <strong>{label}</strong>
+                    <span className="text-muted text-xs font-mono" style={{ marginLeft: 8 }}>
+                      ({s.lat.toFixed(4)}, {s.lng.toFixed(4)})
+                    </span>
+                  </span>
+                  <span className="text-muted text-xs" style={{ flexShrink: 0 }}>
+                    {Math.round(minutes)}分
                   </span>
                 </li>
               );
