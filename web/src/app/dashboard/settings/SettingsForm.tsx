@@ -100,6 +100,7 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
             update("home_lat", lat);
             update("home_lng", lng);
           }}
+          onRadiusChange={(r) => update("home_radius_m", r)}
         />
       </section>
 
@@ -117,6 +118,7 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
             update("work_lat", lat);
             update("work_lng", lng);
           }}
+          onRadiusChange={(r) => update("work_radius_m", r)}
         />
       </section>
 

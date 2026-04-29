@@ -29,18 +29,27 @@ type SearchResult = {
   display_name: string;
 };
 
+const RADIUS_OPTIONS = [
+  { value: 100, label: "100m（自宅・小規模オフィス向け）" },
+  { value: 200, label: "200m" },
+  { value: 500, label: "500m（中規模オフィスビル向け）" },
+  { value: 1000, label: "1km（大規模拠点・駅前向け）" },
+];
+
 export default function LocationPicker({
   label,
   lat,
   lng,
   radiusM,
   onChange,
+  onRadiusChange,
 }: {
   label: string;
   lat: number | null;
   lng: number | null;
   radiusM: number;
   onChange: (lat: number, lng: number) => void;
+  onRadiusChange?: (radiusM: number) => void;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -159,6 +168,28 @@ export default function LocationPicker({
               {r.display_name}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* 半径選択 */}
+      {onRadiusChange && (
+        <div className="row" style={{ gap: "var(--space-2)" }}>
+          <label className="text-sm text-light" htmlFor={`radius-${label}`}>
+            {label}エリア半径:
+          </label>
+          <select
+            id={`radius-${label}`}
+            value={radiusM}
+            onChange={(e) => onRadiusChange(parseInt(e.target.value))}
+            className="select"
+            style={{ maxWidth: 320 }}
+          >
+            {RADIUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 
