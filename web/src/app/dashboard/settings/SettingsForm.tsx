@@ -33,10 +33,10 @@ type Setting = {
 const DEFAULTS: Setting = {
   work_lat: 35.681,
   work_lng: 139.766,
-  work_radius_m: 1000,
+  work_radius_m: 100,
   home_lat: 35.625,
   home_lng: 139.725,
-  home_radius_m: 1000,
+  home_radius_m: 100,
   trip_definition_type: "hours",
   trip_threshold_hours: 4,
   trip_threshold_km: 30,

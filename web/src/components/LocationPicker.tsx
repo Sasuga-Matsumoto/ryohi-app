@@ -201,9 +201,9 @@ export default function LocationPicker({
           lineHeight: 1.6,
         }}
       >
-        💡 操作: ① 上の入力欄で住所検索 / ② 検索結果クリックで Pin 移動 / ③ 地図を直接クリックして Pin 移動 / ④ 「現在地」ボタンで現在地取得
+        操作: ① 上の入力欄で住所検索 / ② 検索結果クリックで Pin 移動 / ③ 地図を直接クリックして Pin 移動 / ④ 「現在地」ボタンで現在地取得
         <br />
-        円は半径 {(radiusM / 1000).toFixed(1)}km の{label}エリア（このエリア内移動は出張に含めません）
+        円は半径 {radiusM >= 1000 ? `${(radiusM / 1000).toFixed(1)}km` : `${radiusM}m`} の{label}エリア（このエリア内移動は出張に含めません）
       </p>
     </div>
   );

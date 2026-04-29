@@ -29,10 +29,10 @@ create table if not exists public.account_settings (
   -- 自宅・勤務地（オンボーディング前は NULL）
   work_lat double precision,
   work_lng double precision,
-  work_radius_m integer not null default 1000,
+  work_radius_m integer not null default 100,
   home_lat double precision,
   home_lng double precision,
-  home_radius_m integer not null default 1000,
+  home_radius_m integer not null default 100,
   -- 出張定義
   trip_definition_type text not null default 'hours' check (trip_definition_type in ('hours','km')),
   trip_threshold_hours integer not null default 4,
