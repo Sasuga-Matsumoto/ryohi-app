@@ -133,9 +133,17 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * 滞在ノード列を受け取り、200m 間隔で経路点を生成する
- * 各滞在内: ts_start と ts_end の2点を打つ（中心座標）
- * 滞在間: 直線上を 200m 間隔で補間（時間も比例配分）
+ * 滞在ノード列を受け取り、200m 間隔で経路点を生成する（デモ用に往復で異なる経路）
+ *
+ * - 各滞在内: ts_start と ts_end の2点を打つ（中心座標）
+ * - 滞在間: 200m 間隔で補間しつつ、segment ごとに進行方向の右/左へ
+ *           交互に正弦曲線でずらす（=往復で異なる経路として可視化）
+ *
+ * 例: 自宅 → 勤務地 → 渋谷 → 勤務地 → 自宅 の場合、
+ *   segment 0 (自宅→勤務地): 右に膨らむ
+ *   segment 1 (勤務地→渋谷): 左に膨らむ
+ *   segment 2 (渋谷→勤務地): 右に膨らむ ← 帰り（segment 1 と逆）
+ *   segment 3 (勤務地→自宅): 左に膨らむ ← 帰宅（segment 0 と逆）
  */
 function generateInterpolatedTracks(
   stays: StayInput[]
@@ -144,6 +152,9 @@ function generateInterpolatedTracks(
     (a, b) => new Date(a.ts_start).getTime() - new Date(b.ts_start).getTime()
   );
   const out: Array<{ ts: string; lat: number; lng: number }> = [];
+
+  // 曲線の最大ずれ（度）。約 300m 相当
+  const CURVE_PEAK_DEG = 0.003;
 
   for (let i = 0; i < sorted.length; i++) {
     const s = sorted[i];
@@ -154,16 +165,29 @@ function generateInterpolatedTracks(
     // 次の滞在まで補間
     if (i + 1 < sorted.length) {
       const next = sorted[i + 1];
+      const dLat = next.lat - s.lat;
+      const dLng = next.lng - s.lng;
+      const segLenDeg = Math.sqrt(dLat * dLat + dLng * dLng);
       const distKm = haversineKm(s.lat, s.lng, next.lat, next.lng);
-      // 200m間隔 → numPoints = Math.floor(distKm / 0.2) - 1（端点を除く中間点）
+      // 200m間隔
       const numPoints = Math.max(0, Math.floor(distKm / 0.2) - 1);
       const startTs = new Date(s.ts_end).getTime();
       const endTs = new Date(next.ts_start).getTime();
 
+      // 進行方向に対する垂直ベクトル（正規化）
+      // 右手系: (dLat, dLng) を時計回りに 90度回した (-dLng, dLat)
+      const perpLat = segLenDeg > 0 ? -dLng / segLenDeg : 0;
+      const perpLng = segLenDeg > 0 ? dLat / segLenDeg : 0;
+
+      // 偶数 segment は右、奇数 segment は左
+      const curveSign = i % 2 === 0 ? 1 : -1;
+
       for (let k = 1; k <= numPoints; k++) {
         const ratio = k / (numPoints + 1);
-        const lat = s.lat + (next.lat - s.lat) * ratio;
-        const lng = s.lng + (next.lng - s.lng) * ratio;
+        // 中点で最大の正弦曲線オフセット
+        const offsetDeg = curveSign * CURVE_PEAK_DEG * Math.sin(Math.PI * ratio);
+        const lat = s.lat + dLat * ratio + perpLat * offsetDeg;
+        const lng = s.lng + dLng * ratio + perpLng * offsetDeg;
         const ts = new Date(startTs + (endTs - startTs) * ratio).toISOString();
         out.push({ ts, lat, lng });
       }

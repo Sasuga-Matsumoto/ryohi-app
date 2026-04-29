@@ -36,6 +36,82 @@ const redPinIcon = new L.Icon({
   popupAnchor: [1, -34],
 });
 
+/**
+ * 進行方向の矢印 DivIcon
+ * 北向き (0deg) を基準に rotate する
+ */
+function makeArrowIcon(bearingDeg: number): L.DivIcon {
+  return L.divIcon({
+    className: "trip-arrow",
+    html: `<div style="transform: rotate(${bearingDeg}deg); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;">
+      <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2 L20 18 L12 14 L4 18 Z" fill="#DC2626" stroke="#FFFFFF" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+    </div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  });
+}
+
+/**
+ * 2点間の方位角 (北を0度、時計回りに 0-360)
+ */
+function bearingDeg(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const toDeg = (r: number) => (r * 180) / Math.PI;
+  const phi1 = toRad(lat1);
+  const phi2 = toRad(lat2);
+  const dl = toRad(lng2 - lng1);
+  const y = Math.sin(dl) * Math.cos(phi2);
+  const x =
+    Math.cos(phi1) * Math.sin(phi2) -
+    Math.sin(phi1) * Math.cos(phi2) * Math.cos(dl);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+/**
+ * tracks 配列から、累積距離 intervalKm ごとに矢印位置を抽出
+ * 矢印は前後の点をもとに進行方向を計算
+ */
+function pickArrowMarkers(
+  tracks: Array<{ ts: string; lat: number; lng: number }>,
+  intervalKm: number = 0.5
+): Array<{ lat: number; lng: number; bearing: number }> {
+  if (tracks.length < 2) return [];
+  const arrows: Array<{ lat: number; lng: number; bearing: number }> = [];
+  let cumKm = 0;
+  for (let i = 1; i < tracks.length; i++) {
+    const seg = haversineKm(
+      tracks[i - 1].lat,
+      tracks[i - 1].lng,
+      tracks[i].lat,
+      tracks[i].lng
+    );
+    if (seg < 0.001) continue; // 同地点はスキップ
+    cumKm += seg;
+    if (cumKm >= intervalKm) {
+      const b = bearingDeg(
+        tracks[i - 1].lat,
+        tracks[i - 1].lng,
+        tracks[i].lat,
+        tracks[i].lng
+      );
+      arrows.push({
+        lat: (tracks[i - 1].lat + tracks[i].lat) / 2,
+        lng: (tracks[i - 1].lng + tracks[i].lng) / 2,
+        bearing: b,
+      });
+      cumKm = 0;
+    }
+  }
+  return arrows;
+}
+
 const EARTH_RADIUS_KM = 6371;
 function haversineKm(
   lat1: number,
@@ -110,6 +186,7 @@ export default function TripMapInner({ work, home, visitedStays, tracks }: Props
 
   const polylinePositions: [number, number][] = tracks.map((t) => [t.lat, t.lng]);
   const kmMilestones = pickKmMilestones(tracks);
+  const arrowMarkers = pickArrowMarkers(tracks, 0.5); // 0.5km ごとに矢印
 
   return (
     <div
@@ -142,6 +219,17 @@ export default function TripMapInner({ work, home, visitedStays, tracks }: Props
             }}
           />
         )}
+
+        {/* 進行方向の矢印（0.5km ごと） */}
+        {arrowMarkers.map((a, i) => (
+          <Marker
+            key={`arrow-${i}`}
+            position={[a.lat, a.lng]}
+            icon={makeArrowIcon(a.bearing)}
+            interactive={false}
+            keyboard={false}
+          />
+        ))}
 
         {/* 200m間隔の経路点（赤丸・小） */}
         {tracks.map((t, i) => (

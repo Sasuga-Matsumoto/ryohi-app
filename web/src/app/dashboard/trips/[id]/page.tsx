@@ -205,7 +205,7 @@ export default async function TripDetailPage({
           }))}
         />
         <p className="helper" style={{ marginTop: "var(--space-2)" }}>
-          勤務地（青円） / 自宅（緑円） / 200m移動（赤丸・小） / 1kmごと（赤ピン） / 滞在ノード（赤丸・大）
+          勤務地（青円） / 自宅（緑円） / 200m移動（赤丸・小） / 0.5kmごとの進行方向（赤矢印） / 1kmごと（赤ピン） / 滞在ノード（赤丸・大）
         </p>
       </section>
 
