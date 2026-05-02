@@ -64,7 +64,7 @@ export default function MapView({
   return (
     <div
       style={{
-        height: 360,
+        height: "clamp(280px, 50vw, 360px)",
         borderRadius: 8,
         overflow: "hidden",
         border: "1px solid #E5E7EB",

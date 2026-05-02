@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { HomeIcon, ShieldIcon, LogOutIcon, SettingsIcon, UserIcon } from "@/components/Icon";
+import MobileNav from "./MobileNav";
 
 /**
  * 全画面共通ヘッダー
@@ -35,53 +36,56 @@ export default async function AppHeader() {
         </a>
 
         {user ? (
-          <nav className="app-nav" aria-label="メインナビゲーション">
-            <a href="/dashboard">
-              <HomeIcon size={16} />
-              <span className="label">ダッシュボード</span>
-            </a>
-            <a href="/dashboard/settings">
-              <SettingsIcon size={16} />
-              <span className="label">設定</span>
-            </a>
-            {role === "admin" && (
-              <a href="/admin">
-                <ShieldIcon size={16} />
-                <span className="label">Admin</span>
+          <>
+            <nav className="app-nav" aria-label="メインナビゲーション">
+              <a href="/dashboard">
+                <HomeIcon size={16} />
+                <span className="label">ダッシュボード</span>
               </a>
-            )}
-            <span
-              style={{
-                width: 1,
-                height: 24,
-                background: "var(--border)",
-                margin: "0 var(--space-2)",
-              }}
-              aria-hidden="true"
-            />
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                fontSize: "var(--text-sm)",
-                color: "var(--text-light)",
-              }}
-            >
-              <UserIcon size={14} />
-              {name}
-            </span>
-            <form action="/auth/signout" method="post">
-              <button
-                type="submit"
-                className="btn btn-ghost btn-sm"
-                aria-label="ログアウト"
+              <a href="/dashboard/settings">
+                <SettingsIcon size={16} />
+                <span className="label">設定</span>
+              </a>
+              {role === "admin" && (
+                <a href="/admin">
+                  <ShieldIcon size={16} />
+                  <span className="label">Admin</span>
+                </a>
+              )}
+              <span
+                style={{
+                  width: 1,
+                  height: 24,
+                  background: "var(--border)",
+                  margin: "0 var(--space-2)",
+                }}
+                aria-hidden="true"
+              />
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: "var(--text-sm)",
+                  color: "var(--text-light)",
+                }}
               >
-                <LogOutIcon size={14} />
-                <span className="label">ログアウト</span>
-              </button>
-            </form>
-          </nav>
+                <UserIcon size={14} />
+                {name}
+              </span>
+              <form action="/auth/signout" method="post">
+                <button
+                  type="submit"
+                  className="btn btn-ghost btn-sm"
+                  aria-label="ログアウト"
+                >
+                  <LogOutIcon size={14} />
+                  <span className="label">ログアウト</span>
+                </button>
+              </form>
+            </nav>
+            <MobileNav role={role} name={name} />
+          </>
         ) : null}
       </div>
     </header>

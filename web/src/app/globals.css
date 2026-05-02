@@ -227,10 +227,10 @@ textarea:focus-visible {
 .btn:active:not(:disabled) { transform: translateY(1px); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.btn-sm { min-height: 32px; padding: 0 var(--space-3); font-size: var(--text-xs); }
+.btn-sm { min-height: 36px; padding: 0 var(--space-3); font-size: var(--text-xs); }
 .btn-lg { min-height: 48px; padding: 0 var(--space-6); font-size: var(--text-base); }
 .btn-icon { width: 40px; padding: 0; }
-.btn-icon.btn-sm { width: 32px; }
+.btn-icon.btn-sm { width: 36px; }
 
 .btn-primary {
   background: var(--bright-blue);
@@ -545,3 +545,211 @@ textarea:focus-visible {
 .icon-sm { width: 14px; height: 14px; }
 .icon-lg { width: 20px; height: 20px; }
 .icon-xl { width: 24px; height: 24px; }
+
+/* ============================================================
+   Safe-area inset (iOS notch / home indicator)
+   ============================================================ */
+@supports (padding: env(safe-area-inset-top)) {
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
+  .app-header {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* ============================================================
+   Trip cards (mobile alternative to table)
+   ============================================================ */
+.trip-card-list { display: none; }
+.trip-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.trip-card + .trip-card { margin-top: var(--space-3); }
+.trip-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.trip-card-excluded { opacity: 0.55; }
+.trip-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+.trip-card-date {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.trip-card-dest {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-strong);
+  letter-spacing: -0.005em;
+  line-height: 1.4;
+}
+.trip-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--text-light);
+}
+.trip-card-meta-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.trip-card-meta-item strong {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+.trip-card-purpose {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--border);
+}
+.trip-card-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* ============================================================
+   Mobile: stack hardening / tap targets / typography scale
+   ============================================================ */
+@media (max-width: 640px) {
+  .page { padding: var(--space-5) 0 var(--space-10); }
+  .page-title { font-size: var(--text-xl); }
+  .page-subtitle { font-size: var(--text-xs); }
+  .section-title { font-size: var(--text-base); }
+
+  /* Trip table → cards */
+  .trip-table-wrap { display: none; }
+  .trip-card-list { display: block; }
+
+  /* KPI cards: keep 3 columns even on phone, but compact */
+  .kpi-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: var(--space-2) !important;
+  }
+  .kpi-grid .card { padding: var(--space-3); }
+  .kpi-grid .stat-label { font-size: 10px; letter-spacing: 0.04em; }
+  .kpi-grid .stat-value { font-size: var(--text-xl); }
+  .kpi-grid .stat-suffix { font-size: var(--text-xs); }
+
+  /* Card padding tighter */
+  .card { padding: var(--space-4); }
+  .card-header { padding: var(--space-3) var(--space-4); }
+
+  /* Setting summary: vertical stack on phone */
+  .setting-summary {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .setting-summary > .row,
+  .setting-summary > div {
+    width: 100%;
+  }
+  .setting-summary .btn { width: 100%; justify-content: center; }
+
+  /* Tap targets */
+  .btn-sm { min-height: 40px; }
+
+  /* Hide page-header right column when wrapping looks bad */
+  .page-header { gap: var(--space-3); }
+}
+
+/* ============================================================
+   AppHeader: mobile drawer
+   ============================================================ */
+.app-nav-toggle {
+  display: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  transition: background-color var(--transition-fast);
+}
+.app-nav-toggle:hover { background: var(--surface-hover); }
+.app-nav-drawer {
+  display: none;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(82vw, 320px);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-xl);
+  z-index: var(--z-modal);
+  flex-direction: column;
+  padding: calc(var(--space-5) + env(safe-area-inset-top, 0px)) var(--space-5) var(--space-6);
+  gap: var(--space-1);
+  transform: translateX(100%);
+  transition: transform var(--transition-base);
+}
+.app-nav-drawer.open { transform: translateX(0); display: flex; }
+.app-nav-drawer a,
+.app-nav-drawer button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text);
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+}
+.app-nav-drawer a:hover,
+.app-nav-drawer button:hover { background: var(--surface-hover); text-decoration: none; }
+.app-nav-drawer .drawer-section-title {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: var(--space-2) var(--space-3) var(--space-1);
+}
+.app-nav-drawer .drawer-divider {
+  height: 1px;
+  background: var(--border);
+  margin: var(--space-2) 0;
+}
+.app-nav-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  z-index: calc(var(--z-modal) - 1);
+  backdrop-filter: blur(2px);
+}
+.app-nav-backdrop.open { display: block; }
+@media (max-width: 768px) {
+  .app-nav { display: none; }
+  .app-nav-toggle { display: inline-flex; }
+}
+
+/* ============================================================
+   Subtle entrance animation
+   ============================================================ */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up { animation: fadeInUp 320ms ease both; }

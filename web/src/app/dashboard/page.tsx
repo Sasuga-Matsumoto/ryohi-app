@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import DevControls from "./DevControls";
 import TripRow from "./TripRow";
+import TripCard from "./TripCard";
 import { AlertTriangleIcon, SettingsIcon, RefreshIcon } from "@/components/Icon";
 
 export default async function DashboardPage() {
@@ -106,7 +107,7 @@ export default async function DashboardPage() {
       )}
 
       {/* サマリ KPI */}
-      <section className="grid grid-3" style={{ marginBottom: "var(--space-6)" }}>
+      <section className="grid grid-3 kpi-grid" style={{ marginBottom: "var(--space-6)" }}>
         <div className="card">
           <p className="stat-label">{ymLabel}の出張回数</p>
           <p className="stat-value">
@@ -133,7 +134,7 @@ export default async function DashboardPage() {
       {/* 設定サマリ（小） */}
       {setting && (
         <div
-          className="card card-flat"
+          className="card card-flat setting-summary"
           style={{
             marginBottom: "var(--space-6)",
             padding: "var(--space-3) var(--space-5)",
@@ -182,32 +183,46 @@ export default async function DashboardPage() {
               {monthTrips?.length ?? 0} 件（除外含む）
             </span>
           </div>
-          <div style={{ overflowX: "auto" }}>
+          <div>
             {monthTrips && monthTrips.length > 0 ? (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>日付</th>
-                    <th>出張先</th>
-                    <th>出発</th>
-                    <th>帰着</th>
-                    <th
-                      className="num"
-                      title="現地での滞在時間（移動時間除く）"
-                    >
-                      滞在時間
-                    </th>
-                    <th className="num">最大距離</th>
-                    <th>目的</th>
-                    <th>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                {/* Desktop: table */}
+                <div className="trip-table-wrap" style={{ overflowX: "auto" }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>日付</th>
+                        <th>出張先</th>
+                        <th>出発</th>
+                        <th>帰着</th>
+                        <th
+                          className="num"
+                          title="現地での滞在時間（移動時間除く）"
+                        >
+                          滞在時間
+                        </th>
+                        <th className="num">最大距離</th>
+                        <th>目的</th>
+                        <th>操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {monthTrips.map((t) => (
+                        <TripRow key={t.id} trip={t} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {/* Mobile: cards */}
+                <div
+                  className="trip-card-list"
+                  style={{ padding: "var(--space-3)" }}
+                >
                   {monthTrips.map((t) => (
-                    <TripRow key={t.id} trip={t} />
+                    <TripCard key={t.id} trip={t} />
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </>
             ) : (
               <div
                 style={{
