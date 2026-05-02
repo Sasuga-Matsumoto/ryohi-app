@@ -59,7 +59,7 @@ export default function LoginPage() {
               fontSize: "var(--text-xl)",
             }}
           >
-            PLEX Log
+            Log Tracker
           </h1>
           <p
             className="text-sm text-muted"

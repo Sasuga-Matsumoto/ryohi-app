@@ -76,7 +76,7 @@ export default function LoginScreen() {
             <View style={styles.brandIcon}>
               <Feather name="map-pin" color={colors.white} size={28} />
             </View>
-            <Text style={styles.brand}>PLEX Log</Text>
+            <Text style={styles.brand}>Log Tracker</Text>
             <Text style={styles.tagline}>
               GPSで自動記録・月次ログを自動生成
             </Text>

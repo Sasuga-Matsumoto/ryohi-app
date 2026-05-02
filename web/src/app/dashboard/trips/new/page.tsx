@@ -4,7 +4,7 @@ import { ArrowLeftIcon, PlusIcon } from "@/components/Icon";
 import ManualTripForm from "./ManualTripForm";
 
 export const metadata = {
-  title: "出張を手動追加 | PLEX Log",
+  title: "出張を手動追加 | Log Tracker",
 };
 
 export default async function NewTripPage() {

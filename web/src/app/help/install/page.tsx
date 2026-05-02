@@ -7,7 +7,7 @@ import {
 } from "@/components/Icon";
 
 export const metadata = {
-  title: "モバイルアプリのインストール | PLEX Log",
+  title: "モバイルアプリのインストール | Log Tracker",
 };
 
 export default function InstallGuidePage() {
@@ -225,7 +225,7 @@ export default function InstallGuidePage() {
             }}
           >
             <li>設定アプリを開く</li>
-            <li>下にスクロール → PLEX Log</li>
+            <li>下にスクロール → Log Tracker</li>
             <li>「位置情報」→「常に」を選択</li>
             <li>「正確な位置情報」を ON</li>
           </ol>

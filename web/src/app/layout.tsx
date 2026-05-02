@@ -3,7 +3,7 @@ import AppHeader from "@/components/AppHeader";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PLEX Log",
+  title: "Log Tracker",
   description: "GPS自動記録で月次出張記録を自動生成・証拠保管するサービス",
   icons: {
     icon: [

@@ -63,8 +63,8 @@ export default function App() {
     return (
       <SafeAreaProvider>
         <View style={styles.loading}>
-          <Text style={styles.loadingBrand}>PLEX</Text>
-          <Text style={styles.loadingTagline}>Log</Text>
+          <Text style={styles.loadingBrand}>Log</Text>
+          <Text style={styles.loadingTagline}>Tracker</Text>
           <ActivityIndicator
             size="small"
             color={colors.primary}

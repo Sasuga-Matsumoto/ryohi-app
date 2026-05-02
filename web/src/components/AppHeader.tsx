@@ -32,7 +32,7 @@ export default async function AppHeader() {
       <div className="app-header-inner">
         <a className="app-brand" href={user ? "/dashboard" : "/login"}>
           <Image src="/logo.png" alt="PLEX" width={28} height={28} priority />
-          <span style={{ fontSize: "var(--text-base)" }}>PLEX Log</span>
+          <span style={{ fontSize: "var(--text-base)" }}>Log Tracker</span>
         </a>
 
         {user ? (

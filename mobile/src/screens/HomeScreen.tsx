@@ -372,7 +372,7 @@ export default function HomeScreen({ session }: { session: any }) {
             <View style={styles.brandIcon}>
               <Feather name="map-pin" color={colors.white} size={18} />
             </View>
-            <Text style={styles.brand}>PLEX Log</Text>
+            <Text style={styles.brand}>Log Tracker</Text>
           </View>
           <Text style={styles.email}>{session?.user?.email ?? ""}</Text>
         </View>
