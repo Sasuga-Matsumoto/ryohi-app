@@ -180,10 +180,11 @@ export default function SettingsScreen({ onClose }: { onClose: () => void }) {
             selected={setting.trip_definition_type === "hours"}
             onPress={() => update("trip_definition_type", "hours")}
           >
-            <NumberInput
+            <NumberStepper
               value={setting.trip_threshold_hours}
               onChange={(v) => update("trip_threshold_hours", v)}
               min={1}
+              max={24}
               suffix="時間以上"
               disabled={setting.trip_definition_type !== "hours"}
             />
@@ -193,10 +194,12 @@ export default function SettingsScreen({ onClose }: { onClose: () => void }) {
             selected={setting.trip_definition_type === "km"}
             onPress={() => update("trip_definition_type", "km")}
           >
-            <NumberInput
+            <NumberStepper
               value={setting.trip_threshold_km}
               onChange={(v) => update("trip_threshold_km", v)}
               min={1}
+              max={1000}
+              step={5}
               suffix="km以上"
               disabled={setting.trip_definition_type !== "km"}
             />
@@ -215,13 +218,16 @@ export default function SettingsScreen({ onClose }: { onClose: () => void }) {
             onChange={(v) => update("business_hours_enabled", v)}
           />
           {setting.business_hours_enabled && (
-            <View style={styles.timeRow}>
-              <TimeInput
+            <View style={{ marginTop: spacing[3] }}>
+              <Text style={styles.fieldLabel}>開始</Text>
+              <TimeStepper
                 value={setting.business_hours_start}
                 onChange={(v) => update("business_hours_start", v)}
               />
-              <Text style={styles.timeSeparator}>〜</Text>
-              <TimeInput
+              <Text style={[styles.fieldLabel, { marginTop: spacing[3] }]}>
+                終了
+              </Text>
+              <TimeStepper
                 value={setting.business_hours_end}
                 onChange={(v) => update("business_hours_end", v)}
               />
@@ -262,12 +268,46 @@ export default function SettingsScreen({ onClose }: { onClose: () => void }) {
             style={styles.input}
             placeholderTextColor={colors.textDisabled}
           />
+          <Text style={[styles.cardHelper, { marginTop: 6, marginBottom: 6 }]}>
+            候補から選ぶ:
+          </Text>
+          <View style={styles.candidateChipsWrap}>
+            {[
+              ...DEFAULT_PURPOSE_PRESETS_MOBILE,
+              ...setting.purpose_presets,
+            ].map((p) => {
+              const selected = setting.default_purpose === p;
+              return (
+                <TouchableOpacity
+                  key={p}
+                  onPress={() => update("default_purpose", p)}
+                  style={[
+                    styles.candidateChip,
+                    selected && {
+                      backgroundColor: colors.primary,
+                      borderColor: colors.primary,
+                    },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.candidateChipText,
+                      selected && { color: colors.white, fontWeight: "700" },
+                    ]}
+                  >
+                    {p}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
           <Text style={[styles.fieldLabel, { marginTop: spacing[4] }]}>
-            プリセット
+            候補
           </Text>
           <Text style={styles.cardHelper}>
-            標準（{DEFAULT_PURPOSE_PRESETS_MOBILE.join(" / ")}）に追加できます
+            標準（{DEFAULT_PURPOSE_PRESETS_MOBILE.join(" / ")}）以外を追加できます
           </Text>
           <PresetEditor
             presets={setting.purpose_presets}
@@ -342,11 +382,12 @@ function SectionHeader({
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.sectionHint}>{hint}</Text>
+        {hint ? <Text style={styles.sectionHint}>{hint}</Text> : null}
       </View>
     </View>
   );
 }
+
 
 function PlaceCard({
   label,
@@ -412,49 +453,129 @@ function RadioRow({
   );
 }
 
-function NumberInput({
+function NumberStepper({
   value,
   onChange,
   min,
+  max,
+  step = 1,
   suffix,
   disabled,
 }: {
   value: number;
   onChange: (v: number) => void;
   min: number;
+  max: number;
+  step?: number;
   suffix: string;
   disabled?: boolean;
 }) {
-  const [draft, setDraft] = useState(String(value));
-  useEffect(() => {
-    setDraft(String(value));
-  }, [value]);
+  const change = (delta: number) => {
+    if (disabled) return;
+    const next = Math.max(min, Math.min(max, value + delta));
+    if (next !== value) onChange(next);
+  };
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-      <TextInput
-        value={draft}
-        keyboardType="numeric"
-        editable={!disabled}
-        onChangeText={(s) => {
-          setDraft(s);
-          const n = parseInt(s.replace(/[^\d]/g, ""), 10);
-          if (Number.isFinite(n) && n >= min) onChange(n);
-        }}
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+      <TouchableOpacity
+        onPress={() => change(-step)}
+        disabled={disabled || value <= min}
         style={[
-          styles.numberInput,
+          styles.stepperBtn,
+          (disabled || value <= min) && styles.stepperBtnDisabled,
+        ]}
+        activeOpacity={0.6}
+      >
+        <Feather
+          name="minus"
+          size={14}
+          color={disabled || value <= min ? colors.textDisabled : colors.text}
+        />
+      </TouchableOpacity>
+      <Text
+        style={[
+          styles.stepperValue,
           disabled && { color: colors.textDisabled },
         ]}
-      />
+      >
+        {value}
+      </Text>
+      <TouchableOpacity
+        onPress={() => change(step)}
+        disabled={disabled || value >= max}
+        style={[
+          styles.stepperBtn,
+          (disabled || value >= max) && styles.stepperBtnDisabled,
+        ]}
+        activeOpacity={0.6}
+      >
+        <Feather
+          name="plus"
+          size={14}
+          color={disabled || value >= max ? colors.textDisabled : colors.text}
+        />
+      </TouchableOpacity>
       <Text
         style={{
           ...typography.caption,
           color: disabled ? colors.textDisabled : colors.textLight,
+          marginLeft: 4,
         }}
       >
         {suffix}
       </Text>
     </View>
   );
+}
+
+/**
+ * 時刻ステッパー: ±15 分単位で増減。HH:MM 表示。
+ */
+function TimeStepper({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [h, m] = parseHHMM(value);
+  const totalMin = h * 60 + m;
+
+  const setMinutes = (totalM: number) => {
+    const clamped = ((totalM % 1440) + 1440) % 1440;
+    const hh = String(Math.floor(clamped / 60)).padStart(2, "0");
+    const mm = String(clamped % 60).padStart(2, "0");
+    onChange(`${hh}:${mm}`);
+  };
+
+  return (
+    <View style={styles.timeStepperRow}>
+      <TouchableOpacity
+        onPress={() => setMinutes(totalMin - 15)}
+        style={styles.stepperBtn}
+        activeOpacity={0.6}
+      >
+        <Feather name="minus" size={14} color={colors.text} />
+      </TouchableOpacity>
+      <Text style={styles.timeStepperValue}>{value}</Text>
+      <TouchableOpacity
+        onPress={() => setMinutes(totalMin + 15)}
+        style={styles.stepperBtn}
+        activeOpacity={0.6}
+      >
+        <Feather name="plus" size={14} color={colors.text} />
+      </TouchableOpacity>
+      <Text style={[styles.timeStepperHint]}>15 分刻み</Text>
+    </View>
+  );
+}
+
+function parseHHMM(s: string): [number, number] {
+  const m = /^(\d{1,2}):(\d{1,2})$/.exec(s ?? "");
+  if (!m) return [9, 0];
+  const h = Math.max(0, Math.min(23, parseInt(m[1], 10)));
+  const min = Math.max(0, Math.min(59, parseInt(m[2], 10)));
+  return [h, min];
 }
 
 function SwitchRow({
@@ -476,30 +597,6 @@ function SwitchRow({
         thumbColor={colors.white}
       />
     </View>
-  );
-}
-
-function TimeInput({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <TextInput
-      value={value}
-      onChangeText={(s) => {
-        // HH:MM フォーマットに簡易整形
-        const cleaned = s.replace(/[^\d:]/g, "").slice(0, 5);
-        onChange(cleaned);
-      }}
-      placeholder="09:00"
-      placeholderTextColor={colors.textDisabled}
-      style={styles.timeInput}
-      keyboardType="numbers-and-punctuation"
-      maxLength={5}
-    />
   );
 }
 
@@ -544,7 +641,7 @@ function PresetEditor({
           value={draft}
           onChangeText={setDraft}
           onSubmitEditing={add}
-          placeholder="例: 業界カンファレンス"
+          placeholder="候補を追加（例: 業界カンファレンス）"
           placeholderTextColor={colors.textDisabled}
           style={[styles.input, { flex: 1 }]}
         />
@@ -628,17 +725,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing[3],
-    paddingTop: spacing[3],
-    paddingBottom: spacing[3],
-    borderBottomWidth: 2,
-    borderBottomColor: colors.primarySoft,
+    paddingTop: spacing[2],
+    paddingBottom: spacing[2],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
     marginTop: spacing[3],
     marginBottom: spacing[3],
   },
   sectionStep: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
@@ -646,10 +743,15 @@ const styles = StyleSheet.create({
   sectionStepText: {
     color: colors.white,
     fontWeight: "700",
-    fontSize: 14,
+    fontSize: 12,
   },
-  sectionTitle: { ...typography.subtitle, color: colors.text },
-  sectionHint: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.text,
+    letterSpacing: 0,
+  },
+  sectionHint: { ...typography.caption, color: colors.textMuted, marginTop: 1 },
 
   card: {
     backgroundColor: colors.surface,
@@ -729,38 +831,68 @@ const styles = StyleSheet.create({
   },
   switchLabel: { ...typography.body, color: colors.text, flex: 1 },
 
-  timeRow: {
+// 数値ステッパー
+  stepperBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepperBtnDisabled: {
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.border,
+  },
+  stepperValue: {
+    minWidth: 36,
+    textAlign: "center",
+    ...typography.bodyStrong,
+    color: colors.text,
+    fontVariant: ["tabular-nums"],
+    paddingHorizontal: 4,
+  },
+
+  // 時刻ステッパー
+  timeStepperRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing[2],
-    marginTop: spacing[3],
   },
-  timeInput: {
-    minHeight: TOUCH_MIN,
-    paddingHorizontal: spacing[3],
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    color: colors.text,
-    fontSize: 14,
-    width: 100,
+  timeStepperValue: {
+    minWidth: 70,
     textAlign: "center",
+    ...typography.bodyStrong,
+    color: colors.text,
     fontVariant: ["tabular-nums"],
+    fontSize: 16,
   },
-  timeSeparator: { ...typography.body, color: colors.textMuted },
+  timeStepperHint: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginLeft: 6,
+  },
 
-  numberInput: {
-    minHeight: 36,
-    width: 60,
-    paddingHorizontal: spacing[2],
+  // 候補チップ（デフォルト目的選択用）
+  candidateChipsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing[2],
+    marginTop: spacing[1],
+  },
+  candidateChip: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: 6,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.borderStrong,
-    borderRadius: radius.sm,
-    color: colors.text,
-    fontSize: 14,
-    textAlign: "center",
     backgroundColor: colors.surface,
+  },
+  candidateChipText: {
+    ...typography.caption,
+    color: colors.text,
   },
 
   presetAddRow: {

@@ -425,7 +425,7 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
             </div>
           </section>
 
-          {/* デフォルト目的 + プリセット管理 */}
+          {/* デフォルト目的 + 候補管理 */}
           <section className="card" aria-labelledby="sec-purpose">
             <h3
               id="sec-purpose"
@@ -435,7 +435,7 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
               <FileTextIcon size={18} /> 出張目的
             </h3>
             <p className="helper" style={{ marginBottom: "var(--space-3)" }}>
-              自動判定された出張の「目的」初期値とプリセットを管理
+              自動判定された出張の「目的」初期値と候補を管理
             </p>
 
             <label htmlFor="default_purpose" className="label">
@@ -455,10 +455,10 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
                 className="label"
                 style={{ marginBottom: "var(--space-1)" }}
               >
-                プリセット
+                候補
               </p>
               <p className="helper" style={{ marginBottom: "var(--space-3)" }}>
-                目的入力時のドロップダウン候補として使われます。標準（{DEFAULT_PURPOSE_PRESETS.join(" / ")}）に追加できます。
+                目的入力時のドロップダウン候補として使われます。標準（{DEFAULT_PURPOSE_PRESETS.join(" / ")}）以外を追加できます。
               </p>
               <PresetEditor
                 presets={s.purpose_presets}
@@ -524,7 +524,7 @@ function PresetEditor({
           className="input"
           placeholder="例: 業界カンファレンス"
           style={{ flex: 1 }}
-          aria-label="プリセットを追加"
+          aria-label="候補を追加"
         />
         <button
           type="button"
@@ -537,7 +537,7 @@ function PresetEditor({
         </button>
       </div>
 
-      {/* 標準プリセット（削除不可） */}
+      {/* 標準候補（削除不可） */}
       <div
         style={{
           display: "flex",
@@ -557,7 +557,7 @@ function PresetEditor({
               fontWeight: 500,
               padding: "4px 10px",
             }}
-            title="標準プリセット（削除不可）"
+            title="標準候補（削除不可）"
           >
             {p}
           </span>
@@ -603,7 +603,7 @@ function PresetEditor({
 
         {presets.length === 0 && (
           <span className="text-xs text-muted" style={{ alignSelf: "center" }}>
-            （カスタムプリセット未追加）
+            （カスタム候補は未追加）
           </span>
         )}
       </div>
