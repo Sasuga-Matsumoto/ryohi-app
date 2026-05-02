@@ -26,13 +26,13 @@ export interface Account {
 export interface AccountSetting {
   account_id: string;
 
-  // 自宅・勤務地（半径1km デフォ）
+  // 自宅・勤務地（半径100m に強制固定）
   work_lat: number;
   work_lng: number;
-  work_radius_m: number; // default 1000
+  work_radius_m: number; // default 100, API で 100 強制
   home_lat: number;
   home_lng: number;
-  home_radius_m: number; // default 1000
+  home_radius_m: number; // default 100, API で 100 強制
 
   // 出張定義
   trip_definition_type: TripDefinitionType; // default 'hours'
