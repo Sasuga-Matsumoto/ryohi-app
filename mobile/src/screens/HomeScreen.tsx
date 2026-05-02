@@ -29,6 +29,7 @@ import {
 import { pendingCount } from "../lib/queue";
 import { defineTasks } from "../lib/tasks";
 import { reportMobileStatus } from "../lib/health";
+import { getTodayStats, type TodayStats } from "../lib/todayStats";
 import { colors, spacing, radius, typography, shadows, TOUCH_MIN } from "../lib/theme";
 
 const WEB_BASE_URL = "https://ryohi-app.vercel.app";
@@ -46,6 +47,7 @@ export default function HomeScreen({ session }: { session: any }) {
   const [status, setStatus] = useState<Status>("loading");
   const [, setSetting] = useState<AccountSetting | null>(null);
   const [pending, setPending] = useState({ tracks: 0, stays: 0 });
+  const [todayStats, setTodayStats] = useState<TodayStats | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const init = useCallback(async () => {
@@ -86,6 +88,8 @@ export default function HomeScreen({ session }: { session: any }) {
 
     const p = await pendingCount();
     setPending(p);
+    const ts = await getTodayStats();
+    setTodayStats(ts);
     setStatus("ready");
   }, []);
 
@@ -353,24 +357,33 @@ export default function HomeScreen({ session }: { session: any }) {
           />
         )}
 
-        {/* 送信状況 KPI（ready のみ） */}
+        {/* 今日の記録 + 送信状況 KPI（ready のみ） */}
         {status === "ready" && (
-          <View style={styles.kpiRow}>
-            <View style={styles.kpiCard}>
-              <View style={styles.kpiHead}>
-                <Feather name="upload-cloud" color={colors.textMuted} size={14} />
-                <Text style={styles.kpiLabel}>未送信 tracks</Text>
+          <>
+            {todayStats && (
+              <TodayRecordCard
+                trackCount={todayStats.trackCount}
+                stayCount={todayStats.stayCount}
+                lastReceivedAt={todayStats.lastReceivedAt}
+              />
+            )}
+            <View style={styles.kpiRow}>
+              <View style={styles.kpiCard}>
+                <View style={styles.kpiHead}>
+                  <Feather name="upload-cloud" color={colors.textMuted} size={14} />
+                  <Text style={styles.kpiLabel}>未送信 tracks</Text>
+                </View>
+                <Text style={styles.kpiValue}>{pending.tracks}</Text>
               </View>
-              <Text style={styles.kpiValue}>{pending.tracks}</Text>
-            </View>
-            <View style={styles.kpiCard}>
-              <View style={styles.kpiHead}>
-                <Feather name="upload-cloud" color={colors.textMuted} size={14} />
-                <Text style={styles.kpiLabel}>未送信 stays</Text>
+              <View style={styles.kpiCard}>
+                <View style={styles.kpiHead}>
+                  <Feather name="upload-cloud" color={colors.textMuted} size={14} />
+                  <Text style={styles.kpiLabel}>未送信 stays</Text>
+                </View>
+                <Text style={styles.kpiValue}>{pending.stays}</Text>
               </View>
-              <Text style={styles.kpiValue}>{pending.stays}</Text>
             </View>
-          </View>
+          </>
         )}
 
         {/* 設定 / ログアウト */}
@@ -438,6 +451,63 @@ function StatusHero({ status }: { status: Status }) {
       </View>
       <Text style={styles.heroTitleWarning}>記録停止中</Text>
       <Text style={styles.heroSubtitle}>下記の設定を完了すると自動記録が始まります</Text>
+    </View>
+  );
+}
+
+function relativeJa(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return "1 分以内";
+  if (min < 60) return `${min} 分前`;
+  const hour = Math.floor(min / 60);
+  if (hour < 24) return `${hour} 時間 ${min % 60} 分前`;
+  const day = Math.floor(hour / 24);
+  return `${day} 日前`;
+}
+
+function TodayRecordCard({
+  trackCount,
+  stayCount,
+  lastReceivedAt,
+}: {
+  trackCount: number;
+  stayCount: number;
+  lastReceivedAt: string | null;
+}) {
+  const isStale =
+    lastReceivedAt
+      ? Date.now() - new Date(lastReceivedAt).getTime() > 60 * 60 * 1000
+      : false;
+  return (
+    <View style={styles.todayCard}>
+      <Text style={styles.todayCardTitle}>今日の記録</Text>
+
+      <View style={styles.todayRow}>
+        <Feather name="radio" color={colors.textMuted} size={14} />
+        <Text style={styles.todayLabel}>直近の GPS 受信</Text>
+        <Text
+          style={[
+            styles.todayValue,
+            isStale && { color: colors.warningText },
+          ]}
+        >
+          {lastReceivedAt ? relativeJa(lastReceivedAt) : "—"}
+          {isStale ? " ⚠" : ""}
+        </Text>
+      </View>
+
+      <View style={styles.todayRow}>
+        <Feather name="map" color={colors.textMuted} size={14} />
+        <Text style={styles.todayLabel}>今日の経路点</Text>
+        <Text style={styles.todayValue}>{trackCount} 件</Text>
+      </View>
+
+      <View style={[styles.todayRow, { borderBottomWidth: 0 }]}>
+        <Feather name="map-pin" color={colors.textMuted} size={14} />
+        <Text style={styles.todayLabel}>滞在ノード</Text>
+        <Text style={styles.todayValue}>{stayCount} 件</Text>
+      </View>
     </View>
   );
 }
@@ -605,6 +675,39 @@ const styles = StyleSheet.create({
   warningButtonText: {
     color: colors.white,
     ...typography.bodyStrong,
+  },
+
+  // 今日の記録
+  todayCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing[3],
+  },
+  todayCardTitle: {
+    ...typography.bodyStrong,
+    color: colors.text,
+    marginBottom: spacing[2],
+  },
+  todayRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+    paddingVertical: spacing[2],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  todayLabel: {
+    ...typography.caption,
+    color: colors.textLight,
+    flex: 1,
+  },
+  todayValue: {
+    ...typography.bodyStrong,
+    color: colors.text,
+    fontVariant: ["tabular-nums"],
   },
 
   // KPI

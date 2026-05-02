@@ -5,6 +5,7 @@
  * stay 行:  pending_stays（30分以上滞在確定時に挿入）
  */
 import * as SQLite from "expo-sqlite";
+import { recordTrack, recordStay } from "./todayStats";
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
@@ -66,6 +67,11 @@ export async function enqueueTracks(tracks: TrackPayload[]): Promise<void> {
       );
     }
   });
+  // 「今日の記録」表示用の累積カウントを更新
+  const latestTs = tracks[tracks.length - 1]?.ts;
+  if (latestTs) {
+    await recordTrack(tracks.length, latestTs).catch(() => {});
+  }
 }
 
 export async function enqueueStay(stay: StayPayload): Promise<void> {
@@ -74,6 +80,7 @@ export async function enqueueStay(stay: StayPayload): Promise<void> {
     "insert into pending_stays (ts_start, ts_end, lat, lng, accuracy, enqueued_at) values (?, ?, ?, ?, ?, ?)",
     [stay.ts_start, stay.ts_end, stay.lat, stay.lng, stay.accuracy ?? null, Date.now()]
   );
+  await recordStay().catch(() => {});
 }
 
 export async function fetchPendingTracks(limit = 1000): Promise<
