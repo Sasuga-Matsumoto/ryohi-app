@@ -41,6 +41,30 @@ export async function loadLastStatus(): Promise<MobileStatus | null> {
   }
 }
 
+export async function fetchTodayTracksFromServer(): Promise<
+  Array<{ ts: string; lat: number; lng: number }> | null
+> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return null;
+    const res = await fetch(`${API_BASE_URL}/api/today-tracks`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      console.warn(`[today-tracks] HTTP ${res.status}`);
+      return null;
+    }
+    const body = (await res.json()) as {
+      tracks?: Array<{ ts: string; lat: number; lng: number }>;
+    };
+    return body.tracks ?? [];
+  } catch (e) {
+    console.warn("[today-tracks] fetch failed", e);
+    return null;
+  }
+}
+
 export async function reportMobileStatus(status: MobileStatus): Promise<void> {
   console.log(`[health] reporting status=${status} to ${API_BASE_URL}/api/health`);
   // 後で flush task が再送信できるよう、最終 status を AsyncStorage に保存

@@ -28,7 +28,7 @@ import {
 } from "../lib/location";
 import { pendingCount, fetchTodayTracks } from "../lib/queue";
 import { defineTasks } from "../lib/tasks";
-import { reportMobileStatus } from "../lib/health";
+import { reportMobileStatus, fetchTodayTracksFromServer } from "../lib/health";
 import { getTodayStats, type TodayStats } from "../lib/todayStats";
 import RouteMap from "../components/RouteMap";
 import { colors, spacing, radius, typography, shadows, TOUCH_MIN } from "../lib/theme";
@@ -94,9 +94,16 @@ export default function HomeScreen({ session }: { session: any }) {
     setPending(p);
     const ts = await getTodayStats();
     setTodayStats(ts);
+    // サーバを信頼ソースに（DevControls のモック投入もここで反映される）
+    // オフライン or サーバ未到達ならローカル SQLite にフォールバック
     try {
-      const tt = await fetchTodayTracks();
-      setTodayTracks(tt.map((r) => ({ lat: r.lat, lng: r.lng })));
+      const serverTracks = await fetchTodayTracksFromServer();
+      if (serverTracks && serverTracks.length > 0) {
+        setTodayTracks(serverTracks.map((r) => ({ lat: r.lat, lng: r.lng })));
+      } else {
+        const local = await fetchTodayTracks();
+        setTodayTracks(local.map((r) => ({ lat: r.lat, lng: r.lng })));
+      }
     } catch (e) {
       console.warn("[home] fetchTodayTracks failed", e);
     }
