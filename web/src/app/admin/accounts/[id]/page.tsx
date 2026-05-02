@@ -7,6 +7,8 @@ import {
   UserIcon,
   ListIcon,
   SettingsIcon,
+  EyeIcon,
+  ChevronRightIcon,
 } from "@/components/Icon";
 import StatusPill from "@/components/StatusPill";
 
@@ -156,6 +158,16 @@ export default async function AccountDetailPage({
             {account.email} ・ {account.company_name}
           </p>
         </div>
+        <nav className="row">
+          <a
+            href={`/admin/accounts/${account.id}/dashboard`}
+            className="btn btn-secondary"
+          >
+            <EyeIcon size={14} />
+            ダッシュボードを見る
+            <ChevronRightIcon size={12} />
+          </a>
+        </nav>
       </header>
 
       {/* 利用状況 KPI */}

@@ -47,11 +47,14 @@ export default async function TripDetailPage({
     );
   }
 
+  // 関連データは Trip の所有者で引く（admin が他ユーザーの Trip を見るケースに対応）
+  const ownerId = trip.account_id;
+
   // 設定（勤務地・自宅エリア表示用）
   const { data: setting } = await supabase
     .from("account_settings")
     .select("work_lat, work_lng, work_radius_m, home_lat, home_lng, home_radius_m")
-    .eq("account_id", user.id)
+    .eq("account_id", ownerId)
     .maybeSingle();
 
   // この日のすべての滞在ノード
@@ -60,7 +63,7 @@ export default async function TripDetailPage({
   const { data: allStays } = await supabase
     .from("location_stays")
     .select("ts_start, ts_end, lat, lng, accuracy, source")
-    .eq("account_id", user.id)
+    .eq("account_id", ownerId)
     .gte("ts_start", dayStart)
     .lte("ts_start", dayEnd)
     .order("ts_start", { ascending: true });
@@ -69,10 +72,13 @@ export default async function TripDetailPage({
   const { data: tracks } = await supabase
     .from("location_tracks")
     .select("ts, lat, lng, accuracy")
-    .eq("account_id", user.id)
+    .eq("account_id", ownerId)
     .gte("ts", trip.depart_ts)
     .lte("ts", trip.return_ts)
     .order("ts", { ascending: true });
+
+  // admin が他ユーザーの Trip を見ている場合は読み取り専用扱いにする
+  const isOwner = user.id === ownerId;
 
   // 訪問先（OUT 滞在）= 勤務地・自宅エリア外の滞在
   const visitedStays = (allStays ?? []).filter((s) => {
@@ -174,12 +180,30 @@ export default async function TripDetailPage({
             paddingTop: "var(--space-4)",
           }}
         >
-          <TripDetailActions
-            tripId={trip.id}
-            initialPurpose={trip.purpose}
-            initialIsExcluded={trip.is_excluded}
-            excludedReason={trip.excluded_reason}
-          />
+          {isOwner ? (
+            <TripDetailActions
+              tripId={trip.id}
+              initialPurpose={trip.purpose}
+              initialIsExcluded={trip.is_excluded}
+              excludedReason={trip.excluded_reason}
+            />
+          ) : (
+            <div className="text-sm text-muted">
+              <strong>目的:</strong> {trip.purpose || "—"}
+              {trip.is_excluded && (
+                <span
+                  className="badge badge-suspended"
+                  style={{ marginLeft: 8 }}
+                >
+                  除外中
+                  {trip.excluded_reason ? `（${trip.excluded_reason}）` : ""}
+                </span>
+              )}
+              <p className="text-xs" style={{ marginTop: 8 }}>
+                運営者として閲覧中のため編集できません
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
