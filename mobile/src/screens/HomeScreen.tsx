@@ -374,6 +374,27 @@ export default function HomeScreen({ session }: { session: any }) {
           />
         )}
 
+        {/* Web 設定画面ショートカット（ready 状態時に上部表示） */}
+        {status === "ready" && (
+          <View style={[styles.actionsCard, { marginBottom: spacing[3] }]}>
+            <TouchableOpacity
+              onPress={handleOpenWebSettings}
+              style={styles.actionRow}
+              activeOpacity={0.6}
+            >
+              <View style={styles.actionRowInner}>
+                <Feather name="settings" color={colors.text} size={18} />
+                <Text style={styles.actionLabel}>Web の設定画面を開く</Text>
+              </View>
+              <Feather
+                name="chevron-right"
+                color={colors.textDisabled}
+                size={18}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* 今日の記録 + 送信状況 KPI（ready のみ） */}
         {status === "ready" && (
           <>
@@ -408,20 +429,8 @@ export default function HomeScreen({ session }: { session: any }) {
           </>
         )}
 
-        {/* 設定 / ログアウト */}
+        {/* ログアウト */}
         <View style={styles.actionsCard}>
-          <TouchableOpacity
-            onPress={handleOpenWebSettings}
-            style={styles.actionRow}
-            activeOpacity={0.6}
-          >
-            <View style={styles.actionRowInner}>
-              <Feather name="settings" color={colors.text} size={18} />
-              <Text style={styles.actionLabel}>Web の設定画面を開く</Text>
-            </View>
-            <Feather name="chevron-right" color={colors.textDisabled} size={18} />
-          </TouchableOpacity>
-          <View style={styles.actionDivider} />
           <TouchableOpacity
             onPress={handleSignOut}
             style={styles.actionRow}

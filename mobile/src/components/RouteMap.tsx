@@ -143,22 +143,22 @@ function buildLeafletHtml(tracks: LatLng[]): string {
       function arrowIcon(bearing) {
         return L.divIcon({
           className: 'route-arrow',
-          html: '<div style="transform: rotate(' + bearing + 'deg); width:22px;height:22px;display:flex;align-items:center;justify-content:center;">'
-              + '<svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
+          html: '<div style="transform: rotate(' + bearing + 'deg); width:11px;height:11px;display:flex;align-items:center;justify-content:center;">'
+              + '<svg width="9" height="9" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
               + '<path d="M12 2 L20 18 L12 14 L4 18 Z" fill="#DC2626" stroke="#FFFFFF" stroke-width="1.5" stroke-linejoin="round"/>'
               + '</svg></div>',
-          iconSize: [22, 22],
-          iconAnchor: [11, 11],
+          iconSize: [11, 11],
+          iconAnchor: [5, 5],
         });
       }
       function kmPinIcon(km) {
-        const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="25" height="41" viewBox="0 0 25 41">'
+        const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="21" viewBox="0 0 25 41">'
                   + '<path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5s12.5-19.1 12.5-28.5C25 5.6 19.4 0 12.5 0z" fill="#DC2626" stroke="#7F1D1D" stroke-width="1"/>'
                   + '<circle cx="12.5" cy="12.5" r="5" fill="#FFFFFF"/></svg>';
         return L.icon({
           iconUrl: 'data:image/svg+xml;base64,' + btoa(svg),
-          iconSize: [25, 41],
-          iconAnchor: [12, 41],
+          iconSize: [13, 21],
+          iconAnchor: [6, 21],
         });
       }
 
