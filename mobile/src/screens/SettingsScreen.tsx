@@ -825,6 +825,10 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: fonts.bold,
     fontSize: 12,
+    lineHeight: 14,
+    textAlign: "center",
+    textAlignVertical: "center",
+    includeFontPadding: false,
   },
   sectionTitle: {
     fontSize: 15,
