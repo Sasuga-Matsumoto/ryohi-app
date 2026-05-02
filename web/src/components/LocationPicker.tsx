@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   formatJapaneseAddressDetailed,
   type FormattedAddress,
-  type NominatimAddress,
+  type ReverseGeocodePayload,
 } from "@/lib/address-format";
 
 // react-leaflet は window 依存なので SSR 無効
@@ -68,17 +68,10 @@ export default function LocationPicker({
     let aborted = false;
     fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`)
       .then((r) => r.json())
-      .then(
-        (data: {
-          display_name?: string | null;
-          address?: NominatimAddress | null;
-        }) => {
-          if (aborted) return;
-          setResolvedAddress(
-            formatJapaneseAddressDetailed(data.address, data.display_name),
-          );
-        },
-      )
+      .then((data: ReverseGeocodePayload) => {
+        if (aborted) return;
+        setResolvedAddress(formatJapaneseAddressDetailed(data));
+      })
       .catch(() => {});
     return () => {
       aborted = true;
@@ -370,6 +363,14 @@ export default function LocationPicker({
                 住所
               </span>
               <span>{resolvedAddress.line}</span>
+            </div>
+          )}
+          {resolvedAddress?.buildingName && (
+            <div style={{ display: "flex", gap: 8 }}>
+              <span style={{ color: "var(--text-light)", minWidth: "5em" }}>
+                建物名
+              </span>
+              <span>{resolvedAddress.buildingName}</span>
             </div>
           )}
           <div style={{ display: "flex", gap: 8, marginTop: 4 }}>

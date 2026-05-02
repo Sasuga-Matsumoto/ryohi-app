@@ -122,7 +122,10 @@ export interface GeocodeResult {
 
 export interface ReverseGeocodeResult {
   display_name: string | null;
+  name: string | null;
   address: Record<string, string> | null;
+  extratags: Record<string, string> | null;
+  namedetails: Record<string, string> | null;
 }
 
 /**
@@ -153,20 +156,25 @@ export interface FormattedAddress {
   postcode: string | null;
   /** 都道府県 + 市区町村 + 町名 + 番地 を半角スペース区切りで結合 */
   line: string | null;
+  /** 建物名・施設名（オフィスビル等で番地が無い場合の補助） */
+  buildingName: string | null;
 }
 
 /**
- * Nominatim の address フィールドから日本住所を構造化する。
+ * Nominatim の reverse-geocode レスポンスから日本住所を構造化する。
  * 例:
- *   { postcode: "110-0007", line: "東京都 台東区 上野公園 12-8" }
+ *   { postcode: "110-0007", line: "東京都 台東区 上野公園 12-8", buildingName: null }
+ *   オフィスビル: { postcode: "100-0005", line: "東京都 千代田区 大手町", buildingName: "大手町ビル" }
  */
 export function formatJapaneseAddress(
-  addr: Record<string, string> | null | undefined,
-  fallback?: string | null,
+  payload: ReverseGeocodeResult | null | undefined,
 ): FormattedAddress {
-  if (!addr) return { postcode: null, line: fallback ?? null };
+  if (!payload) return { postcode: null, line: null, buildingName: null };
+  const addr = payload.address ?? {};
+  const extra = payload.extratags ?? {};
+  const named = payload.namedetails ?? {};
 
-  const postcode = addr.postcode ?? null;
+  const postcode = addr.postcode ?? extra["addr:postcode"] ?? null;
   const prefecture = addr.province ?? addr.state ?? "";
   const city =
     addr.city ?? addr.town ?? addr.county ?? addr.municipality ?? "";
@@ -177,8 +185,19 @@ export function formatJapaneseAddress(
     addr.quarter ??
     addr.hamlet ??
     "";
-  const block = addr.block ?? addr.amenity ?? "";
-  const houseNumber = addr.house_number ?? "";
+  const block = addr.block ?? "";
+  const houseNumber = addr.house_number ?? extra["addr:housenumber"] ?? "";
+
+  const buildingName =
+    named["name:ja"] ??
+    payload.name ??
+    addr.building ??
+    addr.office ??
+    addr.shop ??
+    addr.amenity ??
+    addr.tourism ??
+    extra["name"] ??
+    null;
 
   const parts = [prefecture, city, ward, suburb, block, houseNumber]
     .map((p) => (p ?? "").trim())
@@ -192,8 +211,9 @@ export function formatJapaneseAddress(
     seen.add(p);
     dedup.push(p);
   }
-  const line = dedup.length > 0 ? dedup.join(" ") : fallback ?? null;
-  return { postcode, line };
+  const line =
+    dedup.length > 0 ? dedup.join(" ") : payload.display_name ?? null;
+  return { postcode, line, buildingName };
 }
 
 /**

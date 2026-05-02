@@ -28,6 +28,8 @@ export async function GET(request: NextRequest) {
   url.searchParams.set("lon", String(lng));
   url.searchParams.set("zoom", "18"); // 番地レベル（自宅・勤務地用）
   url.searchParams.set("addressdetails", "1");
+  url.searchParams.set("namedetails", "1");
+  url.searchParams.set("extratags", "1");
   url.searchParams.set("accept-language", "ja");
 
   const res = await fetch(url.toString(), {
@@ -41,9 +43,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ display_name: null });
   }
 
-  const data = (await res.json()) as { display_name?: string; address?: Record<string, string> };
+  const data = (await res.json()) as {
+    display_name?: string;
+    name?: string;
+    address?: Record<string, string>;
+    extratags?: Record<string, string>;
+    namedetails?: Record<string, string>;
+  };
   return NextResponse.json({
     display_name: data.display_name ?? null,
+    name: data.name ?? null,
     address: data.address ?? null,
+    extratags: data.extratags ?? null,
+    namedetails: data.namedetails ?? null,
   });
 }

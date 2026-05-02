@@ -393,10 +393,7 @@ function PlaceCard({
     reverseGeocode(lat!, lng!).then((r) => {
       if (cancelled) return;
       setResolving(false);
-      const formatted = r
-        ? formatJapaneseAddress(r.address, r.display_name)
-        : null;
-      setAddress(formatted);
+      setAddress(r ? formatJapaneseAddress(r) : null);
     });
     return () => {
       cancelled = true;
@@ -404,7 +401,8 @@ function PlaceCard({
     // 緯度経度が変わったときだけ再解決
   }, [isSet, lat, lng]);
 
-  const hasAddress = isSet && address && (address.postcode || address.line);
+  const hasAddress =
+    isSet && address && (address.postcode || address.line || address.buildingName);
 
   return (
     <TouchableOpacity onPress={onEdit} style={styles.card} activeOpacity={0.7}>
@@ -428,6 +426,14 @@ function PlaceCard({
                     <Text style={styles.placeKey}>住所</Text>
                     <Text style={styles.placeAddress} numberOfLines={2}>
                       {address!.line}
+                    </Text>
+                  </View>
+                )}
+                {address!.buildingName && (
+                  <View style={styles.placeRow}>
+                    <Text style={styles.placeKey}>建物名</Text>
+                    <Text style={styles.placeAddress} numberOfLines={1}>
+                      {address!.buildingName}
                     </Text>
                   </View>
                 )}
