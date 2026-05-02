@@ -261,47 +261,18 @@ export default function SettingsScreen({ onClose }: { onClose: () => void }) {
           </Text>
 
           <Text style={styles.fieldLabel}>デフォルト目的</Text>
-          <TextInput
-            value={setting.default_purpose}
-            onChangeText={(v) => update("default_purpose", v)}
-            placeholder="顧客訪問"
-            style={styles.input}
-            placeholderTextColor={colors.textDisabled}
-          />
-          <Text style={[styles.cardHelper, { marginTop: 6, marginBottom: 6 }]}>
-            候補から選ぶ:
+          <Text style={[styles.cardHelper, { marginTop: 0, marginBottom: 6 }]}>
+            候補から選択（追加・編集は下の「候補」から）
           </Text>
-          <View style={styles.candidateChipsWrap}>
-            {[
+          <PurposeDropdown
+            value={setting.default_purpose}
+            options={dedupePurposes([
               ...DEFAULT_PURPOSE_PRESETS_MOBILE,
               ...setting.purpose_presets,
-            ].map((p) => {
-              const selected = setting.default_purpose === p;
-              return (
-                <TouchableOpacity
-                  key={p}
-                  onPress={() => update("default_purpose", p)}
-                  style={[
-                    styles.candidateChip,
-                    selected && {
-                      backgroundColor: colors.primary,
-                      borderColor: colors.primary,
-                    },
-                  ]}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.candidateChipText,
-                      selected && { color: colors.white, fontWeight: "700" },
-                    ]}
-                  >
-                    {p}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+              setting.default_purpose,
+            ])}
+            onSelect={(v) => update("default_purpose", v)}
+          />
 
           <Text style={[styles.fieldLabel, { marginTop: spacing[4] }]}>
             候補
@@ -567,6 +538,115 @@ function TimeStepper({
       </TouchableOpacity>
       <Text style={[styles.timeStepperHint]}>15 分刻み</Text>
     </View>
+  );
+}
+
+function dedupePurposes(arr: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const v of arr) {
+    const trimmed = v?.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    out.push(trimmed);
+  }
+  return out;
+}
+
+function PurposeDropdown({
+  value,
+  options,
+  onSelect,
+}: {
+  value: string;
+  options: string[];
+  onSelect: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <TouchableOpacity
+        onPress={() => setOpen(true)}
+        style={styles.dropdownField}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.dropdownValue}>
+          {value || "（未設定）"}
+        </Text>
+        <Feather name="chevron-down" color={colors.textMuted} size={18} />
+      </TouchableOpacity>
+      <Modal
+        visible={open}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.dropdownBackdrop}
+          activeOpacity={1}
+          onPress={() => setOpen(false)}
+        >
+          <View
+            style={styles.dropdownSheet}
+            // タップ伝播を止める
+            onStartShouldSetResponder={() => true}
+          >
+            <View style={styles.dropdownHeader}>
+              <Text style={styles.dropdownTitle}>デフォルト目的を選択</Text>
+              <TouchableOpacity onPress={() => setOpen(false)} hitSlop={8}>
+                <Feather name="x" color={colors.textMuted} size={20} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 360 }}>
+              {options.length === 0 ? (
+                <Text style={{ padding: spacing[4], color: colors.textMuted }}>
+                  候補がありません。下の「候補」から追加してください。
+                </Text>
+              ) : (
+                options.map((opt) => {
+                  const selected = opt === value;
+                  return (
+                    <TouchableOpacity
+                      key={opt}
+                      onPress={() => {
+                        onSelect(opt);
+                        setOpen(false);
+                      }}
+                      style={[
+                        styles.dropdownOption,
+                        selected && {
+                          backgroundColor: colors.infoBg,
+                        },
+                      ]}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownOptionText,
+                          selected && {
+                            color: colors.primary,
+                            fontWeight: "700",
+                          },
+                        ]}
+                      >
+                        {opt}
+                      </Text>
+                      {selected && (
+                        <Feather
+                          name="check"
+                          color={colors.primary}
+                          size={18}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </>
   );
 }
 
@@ -875,24 +955,59 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
 
-  // 候補チップ（デフォルト目的選択用）
-  candidateChipsWrap: {
+  // デフォルト目的ドロップダウン
+  dropdownField: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing[2],
-    marginTop: spacing[1],
-  },
-  candidateChip: {
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: TOUCH_MIN,
     paddingHorizontal: spacing[3],
-    paddingVertical: 6,
-    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.borderStrong,
+    borderRadius: radius.md,
     backgroundColor: colors.surface,
   },
-  candidateChipText: {
-    ...typography.caption,
+  dropdownValue: {
+    ...typography.body,
     color: colors.text,
+    flex: 1,
+  },
+  dropdownBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing[5],
+  },
+  dropdownSheet: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+  },
+  dropdownHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: spacing[4],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  dropdownTitle: { ...typography.bodyStrong, color: colors.text },
+  dropdownOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  dropdownOptionText: {
+    ...typography.body,
+    color: colors.text,
+    flex: 1,
   },
 
   presetAddRow: {
