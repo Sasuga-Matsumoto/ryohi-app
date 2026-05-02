@@ -4,10 +4,10 @@
  * Nominatim 逆ジオコーディング: 緯度経度 → 市区町村名
  */
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getApiClient } from "@/lib/supabase/api-auth";
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await getApiClient(request);
   const {
     data: { user },
   } = await supabase.auth.getUser();

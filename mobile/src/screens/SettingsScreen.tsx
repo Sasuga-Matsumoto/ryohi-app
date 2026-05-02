@@ -29,6 +29,7 @@ import {
   type FullSetting,
 } from "../lib/settings";
 import LocationPickerMap, { type LatLng } from "../components/LocationPickerMap";
+import { reverseGeocode, formatJapaneseAddress } from "../lib/health";
 import {
   colors,
   spacing,
@@ -375,6 +376,30 @@ function PlaceCard({
   onEdit: () => void;
 }) {
   const isSet = lat != null && lng != null;
+  const [address, setAddress] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(false);
+
+  useEffect(() => {
+    if (!isSet) {
+      setAddress(null);
+      return;
+    }
+    let cancelled = false;
+    setResolving(true);
+    reverseGeocode(lat!, lng!).then((r) => {
+      if (cancelled) return;
+      setResolving(false);
+      const formatted = r
+        ? formatJapaneseAddress(r.address, r.display_name)
+        : null;
+      setAddress(formatted);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // 緯度経度が変わったときだけ再解決
+  }, [isSet, lat, lng]);
+
   return (
     <TouchableOpacity onPress={onEdit} style={styles.card} activeOpacity={0.7}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -382,9 +407,17 @@ function PlaceCard({
         <View style={{ flex: 1 }}>
           <Text style={styles.cardTitle}>{label}</Text>
           {isSet ? (
-            <Text style={styles.placeMono}>
-              {lat!.toFixed(6)}, {lng!.toFixed(6)}
-            </Text>
+            address ? (
+              <Text style={styles.placeAddress} numberOfLines={2}>
+                {address}
+              </Text>
+            ) : resolving ? (
+              <Text style={styles.placeMono}>住所を取得中…</Text>
+            ) : (
+              <Text style={styles.placeMono}>
+                {lat!.toFixed(6)}, {lng!.toFixed(6)}
+              </Text>
+            )
           ) : (
             <Text style={styles.placeEmpty}>未設定 — タップして設定</Text>
           )}
@@ -874,6 +907,11 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textLight,
     fontVariant: ["tabular-nums"],
+    marginTop: 2,
+  },
+  placeAddress: {
+    ...typography.body,
+    color: colors.textLight,
     marginTop: 2,
   },
   placeEmpty: {

@@ -120,6 +120,74 @@ export interface GeocodeResult {
   display_name: string;
 }
 
+export interface ReverseGeocodeResult {
+  display_name: string | null;
+  address: Record<string, string> | null;
+}
+
+/**
+ * 緯度経度 → 住所
+ * Nominatim の逆ジオコーディング。
+ * 失敗時は null を返す（呼び出し側で座標フォールバックする想定）。
+ */
+export async function reverseGeocode(
+  lat: number,
+  lng: number,
+): Promise<ReverseGeocodeResult | null> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return null;
+    const res = await fetch(
+      `${API_BASE_URL}/api/reverse-geocode?lat=${lat}&lng=${lng}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!res.ok) return null;
+    return (await res.json()) as ReverseGeocodeResult;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Nominatim の address フィールドから日本住所を組み立てる。
+ * 例: 東京都港区赤坂7-1-1 / 神奈川県横浜市西区南幸2-15-13
+ *
+ * Nominatim の日本逆ジオコーディングは英語キー(state/city/suburb等)で
+ * 都道府県・市区町村・町名・番地を返す。
+ */
+export function formatJapaneseAddress(
+  addr: Record<string, string> | null | undefined,
+  fallback?: string | null,
+): string | null {
+  if (!addr) return fallback ?? null;
+  const prefecture = addr.province ?? addr.state ?? "";
+  const city =
+    addr.city ?? addr.town ?? addr.county ?? addr.municipality ?? "";
+  const ward = addr.city_district ?? addr.ward ?? "";
+  const suburb =
+    addr.suburb ??
+    addr.neighbourhood ??
+    addr.quarter ??
+    addr.hamlet ??
+    "";
+  const block = addr.block ?? "";
+  const houseNumber = addr.house_number ?? "";
+
+  const parts = [prefecture, city, ward, suburb, block, houseNumber]
+    .filter((p) => p && p.trim().length > 0);
+  if (parts.length === 0) return fallback ?? null;
+  // 同じ要素の重複を削除（city と ward が同じ場合など）
+  const seen = new Set<string>();
+  const dedup: string[] = [];
+  for (const p of parts) {
+    if (seen.has(p)) continue;
+    seen.add(p);
+    dedup.push(p);
+  }
+  return dedup.join("");
+}
+
 /**
  * 住所・郵便番号・施設名で検索（Web の /api/geocode を経由・Nominatim プロキシ）
  */
