@@ -192,6 +192,8 @@ textarea:focus-visible {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
   padding: var(--space-4) var(--space-6);
   border-bottom: 1px solid var(--border);
   font-weight: 600;
@@ -661,19 +663,44 @@ textarea:focus-visible {
     grid-template-columns: repeat(3, 1fr) !important;
     gap: var(--space-2) !important;
   }
-  .kpi-grid .card { padding: var(--space-3); }
-  .kpi-grid .stat-label { font-size: 10px; letter-spacing: 0.04em; }
-  .kpi-grid .stat-value { font-size: var(--text-xl); }
+  .kpi-grid .card {
+    padding: var(--space-3);
+    min-width: 0;
+    overflow: hidden;
+  }
+  .kpi-grid .stat-label {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .kpi-grid .stat-value {
+    font-size: var(--text-xl);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+  }
   .kpi-grid .stat-suffix { font-size: var(--text-xs); }
 
   /* Card padding tighter */
   .card { padding: var(--space-4); }
-  .card-header { padding: var(--space-3) var(--space-4); }
+  .card-header {
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--text-sm);
+    gap: var(--space-2);
+  }
+  .card-header > span:first-child { flex: 1 1 100%; }
+  .card-header > span:last-child {
+    flex: 0 1 auto;
+    margin-left: auto;
+  }
 
   /* Setting summary: vertical stack on phone */
   .setting-summary {
     flex-direction: column !important;
     align-items: stretch !important;
+    padding: var(--space-3) var(--space-4) !important;
   }
   .setting-summary > .row,
   .setting-summary > div {
@@ -684,8 +711,62 @@ textarea:focus-visible {
   /* Tap targets */
   .btn-sm { min-height: 40px; }
 
-  /* Hide page-header right column when wrapping looks bad */
+  /* Page header */
   .page-header { gap: var(--space-3); }
+  .page-header > div { min-width: 0; flex: 1 1 100%; }
+
+  /* Trip card */
+  .trip-card { padding: var(--space-3); }
+  .trip-card-head {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .trip-card-meta {
+    gap: var(--space-2) var(--space-4);
+    font-size: var(--text-xs);
+  }
+  .trip-card-purpose {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .trip-card-actions { width: 100%; justify-content: flex-end; }
+
+  /* Container padding（既存 360px 用に加えて 480px 以下も詰める）*/
+  .container { padding-left: var(--space-4); padding-right: var(--space-4); }
+}
+
+/* オンボーディングチェックリストの list-item action button が
+   タイトル + ステップ番号と並べた時に折り返しても綺麗に収まるように */
+@media (max-width: 480px) {
+  .container { padding-left: var(--space-3); padding-right: var(--space-3); }
+  .kpi-grid .stat-value { font-size: var(--text-lg); }
+  .kpi-grid .stat-label { font-size: 9px; }
+}
+
+/* ============================================================
+   Dev controls
+   ============================================================ */
+.dev-controls-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+.dev-controls-label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.85rem;
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.dev-controls-input { width: 160px; }
+.dev-controls-select { width: 280px; max-width: 100%; }
+@media (max-width: 640px) {
+  .dev-controls-row { flex-direction: column; align-items: stretch; }
+  .dev-controls-label { flex: 1 1 auto; }
+  .dev-controls-input,
+  .dev-controls-select { width: 100%; flex: 1; }
 }
 
 /* ============================================================

@@ -130,24 +130,22 @@ export default function DevControls({ workLat, workLng, homeLat, homeLng }: Prop
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-        <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: "0.85rem" }}>
+      <div className="dev-controls-row">
+        <label className="dev-controls-label">
           日付:
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="input"
-            style={{ width: 160 }}
+            className="input dev-controls-input"
           />
         </label>
-        <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: "0.85rem" }}>
+        <label className="dev-controls-label">
           シナリオ:
           <select
             value={scenario}
             onChange={(e) => setScenario(e.target.value as typeof scenario)}
-            className="input"
-            style={{ width: 280 }}
+            className="input dev-controls-select"
           >
             <option value="trip5h">出張5h（渋谷 / 出張生成想定）</option>
             <option value="trip3h">出張3h（閾値未満 / 出張なし想定）</option>
