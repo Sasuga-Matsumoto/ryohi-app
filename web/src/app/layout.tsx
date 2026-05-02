@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import AppHeader from "@/components/AppHeader";
 import "./globals.css";
 
@@ -15,6 +15,12 @@ export const metadata: Metadata = {
   other: {
     "theme-color": "#1E3A8A",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
