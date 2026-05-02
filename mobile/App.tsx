@@ -1,11 +1,13 @@
 import "react-native-url-polyfill/auto";
 import { useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, View, ActivityIndicator } from "react-native";
+import { StyleSheet, View, Text, ActivityIndicator } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Linking from "expo-linking";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./src/lib/supabase";
 import { defineTasks } from "./src/lib/tasks";
+import { colors, typography, spacing } from "./src/lib/theme";
 import LoginScreen from "./src/screens/LoginScreen";
 import HomeScreen from "./src/screens/HomeScreen";
 
@@ -59,26 +61,45 @@ export default function App() {
 
   if (loading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#3366FF" />
-        <StatusBar style="auto" />
-      </View>
+      <SafeAreaProvider>
+        <View style={styles.loading}>
+          <Text style={styles.loadingBrand}>PLEX</Text>
+          <Text style={styles.loadingTagline}>出張ログ</Text>
+          <ActivityIndicator
+            size="small"
+            color={colors.primary}
+            style={{ marginTop: spacing[6] }}
+          />
+          <StatusBar style="auto" />
+        </View>
+      </SafeAreaProvider>
     );
   }
 
   return (
-    <>
+    <SafeAreaProvider>
       {session ? <HomeScreen session={session} /> : <LoginScreen />}
       <StatusBar style="auto" />
-    </>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
   loading: {
     flex: 1,
-    backgroundColor: "#F4F6FB",
+    backgroundColor: colors.bg,
     alignItems: "center",
     justifyContent: "center",
+  },
+  loadingBrand: {
+    ...typography.display,
+    color: colors.brand,
+    letterSpacing: 4,
+  },
+  loadingTagline: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: spacing[1],
+    letterSpacing: 1,
   },
 });

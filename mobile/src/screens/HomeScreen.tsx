@@ -12,7 +12,9 @@ import {
   AppState,
   type AppStateStatus,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
+import { Feather } from "@expo/vector-icons";
 import { supabase } from "../lib/supabase";
 import {
   fetchMySettings,
@@ -26,6 +28,7 @@ import {
 } from "../lib/location";
 import { pendingCount } from "../lib/queue";
 import { defineTasks } from "../lib/tasks";
+import { colors, spacing, radius, typography, shadows, TOUCH_MIN } from "../lib/theme";
 
 const WEB_BASE_URL = "https://ryohi-app.vercel.app";
 const WEB_SETTINGS_PATH = "/dashboard/settings";
@@ -40,7 +43,7 @@ type Status =
 
 export default function HomeScreen({ session }: { session: any }) {
   const [status, setStatus] = useState<Status>("loading");
-  const [setting, setSetting] = useState<AccountSetting | null>(null);
+  const [, setSetting] = useState<AccountSetting | null>(null);
   const [pending, setPending] = useState({ tracks: 0, stays: 0 });
   const [refreshing, setRefreshing] = useState(false);
 
@@ -103,7 +106,7 @@ export default function HomeScreen({ session }: { session: any }) {
     return () => sub.remove();
   }, [init]);
 
-  // ボタン連打や handler 並行実行を防ぐ
+  // 連打や handler 並行実行を防ぐ
   const navBusyRef = useRef(false);
 
   const safeOpenSettings = async () => {
@@ -128,7 +131,6 @@ export default function HomeScreen({ session }: { session: any }) {
       }
       await safeOpenSettings();
     } finally {
-      // OS 復帰後に再タップできるよう少し遅延
       setTimeout(() => {
         navBusyRef.current = false;
       }, 500);
@@ -139,9 +141,6 @@ export default function HomeScreen({ session }: { session: any }) {
     if (navBusyRef.current) return;
     navBusyRef.current = true;
     try {
-      // 公開 API で「位置情報の権限詳細画面」に直接飛ぶインテントは無いが、
-      // canAskAgain=true の間は requestPermissionsAsync で OS が詳細画面に navigate してくれる。
-      // canAskAgain=false（Don't Allow を重ねた状態）or ダイアログ拒否時は App Info にフォールバック。
       let fg;
       try {
         fg = await Location.getForegroundPermissionsAsync();
@@ -150,7 +149,6 @@ export default function HomeScreen({ session }: { session: any }) {
         await safeOpenSettings();
         return;
       }
-
       if (fg.status !== "granted" && fg.canAskAgain) {
         try {
           const r = await Location.requestForegroundPermissionsAsync();
@@ -164,7 +162,6 @@ export default function HomeScreen({ session }: { session: any }) {
           return;
         }
       }
-
       let bg;
       try {
         bg = await Location.getBackgroundPermissionsAsync();
@@ -173,19 +170,15 @@ export default function HomeScreen({ session }: { session: any }) {
         await safeOpenSettings();
         return;
       }
-
       if (bg.status !== "granted" && bg.canAskAgain) {
         try {
           await Location.requestBackgroundPermissionsAsync();
         } catch (e) {
           console.warn("[home] requestBg failed", e);
         }
-        // OS が settings に navigate したかを AppState で判定し、二重ナビを防ぐ
         await new Promise((res) => setTimeout(res, 400));
         if (AppState.currentState !== "active") return;
-        // OS が何もしなかった（死にボタン回避）→ App Info にフォールバック
       }
-
       await safeOpenSettings();
     } finally {
       setTimeout(() => {
@@ -198,7 +191,6 @@ export default function HomeScreen({ session }: { session: any }) {
     if (navBusyRef.current) return;
     navBusyRef.current = true;
     try {
-      // 自動ログインを通すため、現在の access/refresh トークンを hash 部に乗せる
       const { data: { session: cur } } = await supabase.auth.getSession();
       const fallbackUrl = `${WEB_BASE_URL}${WEB_SETTINGS_PATH}`;
       const url =
@@ -220,7 +212,7 @@ export default function HomeScreen({ session }: { session: any }) {
     }
   };
 
-  // 警告状態に遷移したら自動でポップアップを出す（同じ状態で連続表示は抑止）
+  // 警告状態に遷移したら自動でポップアップ
   const popupShownForRef = useRef<Status | null>(null);
   useEffect(() => {
     const warnings: Status[] = [
@@ -291,176 +283,378 @@ export default function HomeScreen({ session }: { session: any }) {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <View style={styles.header}>
-        <Text style={styles.brand}>PLEX 出張ログ</Text>
-        <Text style={styles.email}>{session?.user?.email ?? ""}</Text>
-      </View>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+      >
+        {/* ヘッダー */}
+        <View style={styles.header}>
+          <View style={styles.brandRow}>
+            <View style={styles.brandIcon}>
+              <Feather name="map-pin" color={colors.white} size={18} />
+            </View>
+            <Text style={styles.brand}>PLEX 出張ログ</Text>
+          </View>
+          <Text style={styles.email}>{session?.user?.email ?? ""}</Text>
+        </View>
 
-      {status === "services_off" && (
-        <View style={styles.warningCard}>
-          <Text style={styles.warningTitle}>端末の位置情報が OFF です</Text>
-          <Text style={styles.warningBody}>
-            {Platform.OS === "android"
-              ? "自動記録するには端末の位置情報を ON にしてください。"
-              : "設定アプリ →「プライバシーとセキュリティ」→「位置情報サービス」を ON にしてください。"}
-          </Text>
-          <TouchableOpacity
+        {/* ヒーロー: 記録状態 */}
+        <StatusHero status={status} />
+
+        {/* 警告カード（状態ごと） */}
+        {status === "services_off" && (
+          <WarningCard
+            title="端末の位置情報が OFF です"
+            body={
+              Platform.OS === "android"
+                ? "自動記録するには端末の位置情報を ON にしてください。"
+                : "設定アプリ →「プライバシーとセキュリティ」→「位置情報サービス」を ON にしてください。"
+            }
+            buttonText={
+              Platform.OS === "android" ? "位置情報設定を開く" : "設定アプリを開く"
+            }
             onPress={handleOpenLocationSettings}
-            style={styles.warningButton}
-          >
-            <Text style={styles.warningButtonText}>
-              {Platform.OS === "android"
-                ? "位置情報設定を開く"
-                : "設定アプリを開く"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {status === "no_permission" && (
-        <View style={styles.warningCard}>
-          <Text style={styles.warningTitle}>位置情報の許可が必要です</Text>
-          <Text style={styles.warningBody}>
-            下のボタンを押すと位置情報の権限画面に移動します。「常に許可」を選んでください。
-          </Text>
-          <TouchableOpacity
+          />
+        )}
+        {status === "no_permission" && (
+          <WarningCard
+            title="位置情報の許可が必要です"
+            body="下のボタンを押すと位置情報の権限画面に移動します。「常に許可」を選んでください。"
+            buttonText="権限画面を開く"
             onPress={handleOpenAppPermissionSettings}
-            style={styles.warningButton}
-          >
-            <Text style={styles.warningButtonText}>権限画面を開く</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {status === "fg_only" && (
-        <View style={styles.warningCard}>
-          <Text style={styles.warningTitle}>「常に許可」が必要です</Text>
-          <Text style={styles.warningBody}>
-            「使用中のみ」では出張ログを記録できません。下のボタンを押すと位置情報の権限画面に移動するので「常に許可」を選んでください。
-          </Text>
-          <TouchableOpacity
+          />
+        )}
+        {status === "fg_only" && (
+          <WarningCard
+            title="「常に許可」が必要です"
+            body="「使用中のみ」では出張ログを記録できません。下のボタンを押すと位置情報の権限画面に移動するので「常に許可」を選んでください。"
+            buttonText="権限画面を開く"
             onPress={handleOpenAppPermissionSettings}
-            style={styles.warningButton}
-          >
-            <Text style={styles.warningButtonText}>権限画面を開く</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {status === "no_setting" && (
-        <View style={styles.warningCard}>
-          <Text style={styles.warningTitle}>自宅・勤務地の設定が必要です</Text>
-          <Text style={styles.warningBody}>
-            Web の設定画面で自宅と勤務地のエリアを地図上で指定してください（半径100m）。設定後、このアプリに戻ると自動で反映されます。
-          </Text>
-          <TouchableOpacity
+          />
+        )}
+        {status === "no_setting" && (
+          <WarningCard
+            title="自宅・勤務地の設定が必要です"
+            body="Web の設定画面で自宅と勤務地のエリアを地図上で指定してください（半径100m）。設定後、このアプリに戻ると自動で反映されます。"
+            buttonText="Web の設定画面を開く"
             onPress={handleOpenWebSettings}
-            style={styles.warningButton}
-          >
-            <Text style={styles.warningButtonText}>Web の設定画面を開く</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+          />
+        )}
 
-      <View style={styles.statusCard}>
-        <Text style={styles.statusLabel}>記録状態</Text>
-        <Text style={styles.statusValue}>
-          {status === "ready" ? "✓ 自動記録中" : "未開始"}
-        </Text>
-      </View>
-
-      {status === "ready" && (
-        <>
-          <View style={styles.row}>
+        {/* 送信状況 KPI（ready のみ） */}
+        {status === "ready" && (
+          <View style={styles.kpiRow}>
             <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>未送信 tracks</Text>
+              <View style={styles.kpiHead}>
+                <Feather name="upload-cloud" color={colors.textMuted} size={14} />
+                <Text style={styles.kpiLabel}>未送信 tracks</Text>
+              </View>
               <Text style={styles.kpiValue}>{pending.tracks}</Text>
             </View>
             <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>未送信 stays</Text>
+              <View style={styles.kpiHead}>
+                <Feather name="upload-cloud" color={colors.textMuted} size={14} />
+                <Text style={styles.kpiLabel}>未送信 stays</Text>
+              </View>
               <Text style={styles.kpiValue}>{pending.stays}</Text>
             </View>
           </View>
+        )}
 
+        {/* 設定 / ログアウト */}
+        <View style={styles.actionsCard}>
           <TouchableOpacity
             onPress={handleOpenWebSettings}
-            style={styles.settingsButton}
+            style={styles.actionRow}
+            activeOpacity={0.6}
           >
-            <Text style={styles.settingsButtonText}>Web の設定画面を開く</Text>
+            <View style={styles.actionRowInner}>
+              <Feather name="settings" color={colors.text} size={18} />
+              <Text style={styles.actionLabel}>Web の設定画面を開く</Text>
+            </View>
+            <Feather name="chevron-right" color={colors.textDisabled} size={18} />
           </TouchableOpacity>
-        </>
-      )}
+          <View style={styles.actionDivider} />
+          <TouchableOpacity
+            onPress={handleSignOut}
+            style={styles.actionRow}
+            activeOpacity={0.6}
+          >
+            <View style={styles.actionRowInner}>
+              <Feather name="log-out" color={colors.danger} size={18} />
+              <Text style={[styles.actionLabel, { color: colors.danger }]}>
+                ログアウト
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
 
-      <TouchableOpacity onPress={handleSignOut} style={styles.linkButton}>
-        <Text style={styles.linkText}>ログアウト</Text>
+// ─────────────────────────────────────
+// サブコンポーネント
+// ─────────────────────────────────────
+
+function StatusHero({ status }: { status: Status }) {
+  if (status === "ready") {
+    return (
+      <View style={[styles.hero, styles.heroReady]}>
+        <View style={styles.heroIconReady}>
+          <Feather name="check-circle" color={colors.success} size={28} />
+        </View>
+        <Text style={styles.heroTitleReady}>自動記録中</Text>
+        <Text style={styles.heroSubtitle}>
+          バックグラウンドで GPS と滞在を記録しています
+        </Text>
+      </View>
+    );
+  }
+  if (status === "loading") {
+    return (
+      <View style={[styles.hero, styles.heroNeutral]}>
+        <Text style={styles.heroTitleNeutral}>読み込み中…</Text>
+      </View>
+    );
+  }
+  // warning
+  return (
+    <View style={[styles.hero, styles.heroWarning]}>
+      <View style={styles.heroIconWarning}>
+        <Feather name="shield" color={colors.warningText} size={28} />
+      </View>
+      <Text style={styles.heroTitleWarning}>記録停止中</Text>
+      <Text style={styles.heroSubtitle}>下記の設定を完了すると自動記録が始まります</Text>
+    </View>
+  );
+}
+
+function WarningCard({
+  title,
+  body,
+  buttonText,
+  onPress,
+}: {
+  title: string;
+  body: string;
+  buttonText: string;
+  onPress: () => void;
+}) {
+  return (
+    <View style={styles.warningCard}>
+      <View style={styles.warningHead}>
+        <Feather name="alert-triangle" color={colors.warningText} size={18} />
+        <Text style={styles.warningTitle}>{title}</Text>
+      </View>
+      <Text style={styles.warningBody}>{body}</Text>
+      <TouchableOpacity
+        onPress={onPress}
+        style={styles.warningButton}
+        activeOpacity={0.85}
+      >
+        <Text style={styles.warningButtonText}>{buttonText}</Text>
+        <Feather name="chevron-right" color={colors.white} size={16} />
       </TouchableOpacity>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F4F6FB" },
-  content: { padding: 20, paddingTop: 60 },
-  header: { marginBottom: 24 },
-  brand: { fontSize: 22, fontWeight: "700", color: "#1E3A8A" },
-  email: { fontSize: 13, color: "#64748B", marginTop: 4 },
-  warningCard: {
-    backgroundColor: "#FFFBEB",
-    borderColor: "#FCD34D",
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+  safe: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1 },
+  content: {
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[4],
+    paddingBottom: spacing[10],
   },
-  warningTitle: { fontSize: 14, fontWeight: "700", color: "#92400E" },
+
+  // header
+  header: { marginBottom: spacing[5] },
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+  },
+  brandIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.md,
+    backgroundColor: colors.brand,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  brand: { ...typography.subtitle, color: colors.brand },
+  email: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: spacing[1],
+    paddingLeft: 40,
+  },
+
+  // hero
+  hero: {
+    alignItems: "center",
+    paddingVertical: spacing[6],
+    paddingHorizontal: spacing[5],
+    borderRadius: radius.lg,
+    marginBottom: spacing[4],
+    ...shadows.card,
+  },
+  heroReady: {
+    backgroundColor: colors.successBg,
+    borderWidth: 1,
+    borderColor: colors.successBorder,
+  },
+  heroNeutral: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  heroWarning: {
+    backgroundColor: colors.warningBg,
+    borderWidth: 1,
+    borderColor: colors.warningBorder,
+  },
+  heroIconReady: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.pill,
+    backgroundColor: "rgba(5, 150, 105, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing[3],
+  },
+  heroIconWarning: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.pill,
+    backgroundColor: "rgba(146, 64, 14, 0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing[3],
+  },
+  heroTitleReady: {
+    ...typography.title,
+    color: colors.successText,
+  },
+  heroTitleWarning: {
+    ...typography.title,
+    color: colors.warningText,
+  },
+  heroTitleNeutral: {
+    ...typography.subtitle,
+    color: colors.textMuted,
+  },
+  heroSubtitle: {
+    ...typography.caption,
+    color: colors.textLight,
+    textAlign: "center",
+    marginTop: spacing[1],
+    paddingHorizontal: spacing[4],
+    lineHeight: 17,
+  },
+
+  // warning card
+  warningCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.warningBorder,
+    padding: spacing[4],
+    marginBottom: spacing[4],
+  },
+  warningHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+    marginBottom: spacing[2],
+  },
+  warningTitle: {
+    ...typography.bodyStrong,
+    color: colors.warningText,
+    flex: 1,
+  },
   warningBody: {
-    fontSize: 13,
-    color: "#78350F",
-    marginTop: 4,
-    lineHeight: 19,
+    ...typography.body,
+    color: colors.textLight,
+    lineHeight: 20,
+    marginBottom: spacing[3],
   },
   warningButton: {
-    backgroundColor: "#3366FF",
-    height: 40,
-    borderRadius: 6,
+    minHeight: TOUCH_MIN,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 12,
+    gap: spacing[1],
   },
-  warningButtonText: { color: "#fff", fontSize: 14, fontWeight: "600" },
-  statusCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 12,
+  warningButtonText: {
+    color: colors.white,
+    ...typography.bodyStrong,
   },
-  statusLabel: { fontSize: 12, color: "#64748B", textTransform: "uppercase" },
-  statusValue: { fontSize: 24, fontWeight: "700", color: "#0F172A", marginTop: 4 },
-  row: { flexDirection: "row", gap: 12, marginBottom: 16 },
+
+  // KPI
+  kpiRow: {
+    flexDirection: "row",
+    gap: spacing[3],
+    marginBottom: spacing[4],
+  },
   kpiCard: {
     flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-  },
-  kpiLabel: { fontSize: 11, color: "#64748B" },
-  kpiValue: { fontSize: 20, fontWeight: "700", color: "#0F172A", marginTop: 4 },
-  settingsButton: {
-    backgroundColor: "#fff",
-    borderColor: "#D1D5DB",
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing[4],
     borderWidth: 1,
-    borderRadius: 8,
-    height: 44,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
+    borderColor: colors.border,
   },
-  settingsButtonText: { color: "#1E3A8A", fontSize: 14, fontWeight: "500" },
-  linkButton: { alignSelf: "center", paddingVertical: 8, marginTop: 8 },
-  linkText: { color: "#64748B", fontSize: 13 },
+  kpiHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[1],
+    marginBottom: spacing[2],
+  },
+  kpiLabel: {
+    ...typography.caption,
+    color: colors.textMuted,
+  },
+  kpiValue: {
+    ...typography.kpi,
+    color: colors.text,
+  },
+
+  // actions
+  actionsCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: "hidden",
+  },
+  actionRow: {
+    minHeight: TOUCH_MIN + 8,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  actionRowInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    flex: 1,
+  },
+  actionLabel: {
+    ...typography.body,
+    color: colors.text,
+  },
+  actionDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing[4],
+  },
 });
