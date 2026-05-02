@@ -8,11 +8,11 @@
  * レスポンス: [{ lat, lng, display_name }]
  */
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getApiClient } from "@/lib/supabase/api-auth";
 
 export async function GET(request: NextRequest) {
   // 認証必須（公開エンドポイントにしない）
-  const supabase = await createClient();
+  const supabase = await getApiClient(request);
   const {
     data: { user },
   } = await supabase.auth.getUser();

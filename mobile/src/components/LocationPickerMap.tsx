@@ -4,11 +4,21 @@
  * - タップ = ピン配置 / ドラッグ = 微調整
  * - 100m 円表示
  * - WebView ↔ RN の双方向 postMessage
+ * - 検索（住所 / 郵便番号 / 施設名）→ Nominatim
  */
-import { useRef } from "react";
-import { View, StyleSheet } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  View,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Text,
+  ActivityIndicator,
+} from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
-import { colors, radius } from "../lib/theme";
+import { Feather } from "@expo/vector-icons";
+import { colors, radius, spacing, typography, TOUCH_MIN } from "../lib/theme";
+import { geocodeSearch, type GeocodeResult } from "../lib/health";
 
 export type LatLng = { lat: number; lng: number };
 
@@ -25,6 +35,31 @@ export default function LocationPickerMap({
 }) {
   const ref = useRef<WebView | null>(null);
   const html = buildPickerHtml(initial, radiusM);
+
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<GeocodeResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // debounce 検索（300ms）
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (query.trim().length < 2) {
+      setResults([]);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      const r = await geocodeSearch(query);
+      setSearching(false);
+      setResults(r);
+      setShowResults(true);
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query]);
 
   const onMessage = (e: WebViewMessageEvent) => {
     try {
@@ -43,31 +78,94 @@ export default function LocationPickerMap({
     } catch {}
   };
 
-  // 親から呼べる: 現在地を地図に反映
   const setCenter = (lat: number, lng: number) => {
     ref.current?.injectJavaScript(
       `try{window.__setPin && window.__setPin(${lat}, ${lng});}catch(e){};true;`,
     );
   };
 
-  // ref の type 整合用に export （現在は使っていないが将来的に外から呼ぶ場合）
-  void setCenter;
+  const pickResult = (r: GeocodeResult) => {
+    setCenter(r.lat, r.lng);
+    onChange({ lat: r.lat, lng: r.lng });
+    setShowResults(false);
+    setQuery("");
+    setResults([]);
+  };
 
   return (
-    <View style={[styles.container, { height }]}>
-      <WebView
-        ref={ref}
-        originWhitelist={["*"]}
-        source={{ html }}
-        style={styles.webview}
-        scrollEnabled={false}
-        showsHorizontalScrollIndicator={false}
-        showsVerticalScrollIndicator={false}
-        scalesPageToFit={false}
-        domStorageEnabled
-        javaScriptEnabled
-        onMessage={onMessage}
-      />
+    <View>
+      {/* 検索バー */}
+      <View style={styles.searchWrap}>
+        <Feather name="search" color={colors.textMuted} size={16} />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          onFocus={() => results.length > 0 && setShowResults(true)}
+          placeholder="住所 / 郵便番号 / 施設名 で検索"
+          placeholderTextColor={colors.textDisabled}
+          style={styles.searchInput}
+          autoCorrect={false}
+          autoCapitalize="none"
+        />
+        {searching && <ActivityIndicator size="small" color={colors.primary} />}
+        {query.length > 0 && !searching && (
+          <TouchableOpacity onPress={() => setQuery("")} hitSlop={8}>
+            <Feather name="x" color={colors.textMuted} size={16} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* 検索結果 */}
+      {showResults && results.length > 0 && (
+        <View style={styles.resultsBox}>
+          {results.map((r, i) => (
+            <TouchableOpacity
+              key={i}
+              onPress={() => pickResult(r)}
+              style={[
+                styles.resultRow,
+                i > 0 && {
+                  borderTopWidth: 1,
+                  borderTopColor: colors.border,
+                },
+              ]}
+              activeOpacity={0.7}
+            >
+              <Feather
+                name="map-pin"
+                color={colors.textMuted}
+                size={14}
+                style={{ marginTop: 3 }}
+              />
+              <Text style={styles.resultText} numberOfLines={2}>
+                {r.display_name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+      {showResults && !searching && query.trim().length >= 2 && results.length === 0 && (
+        <View style={styles.resultsBox}>
+          <Text style={styles.noResult}>該当する場所が見つかりません</Text>
+        </View>
+      )}
+
+      {/* マップ本体 */}
+      <View style={[styles.container, { height }]}>
+        <WebView
+          ref={ref}
+          originWhitelist={["*"]}
+          source={{ html }}
+          style={styles.webview}
+          scrollEnabled={false}
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+          scalesPageToFit={false}
+          domStorageEnabled
+          javaScriptEnabled
+          onMessage={onMessage}
+        />
+      </View>
     </View>
   );
 }
@@ -166,6 +264,50 @@ function buildPickerHtml(initial: LatLng | null, radiusM: number): string {
 }
 
 const styles = StyleSheet.create({
+  searchWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: spacing[3],
+    height: TOUCH_MIN,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    marginBottom: spacing[2],
+  },
+  searchInput: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 14,
+    paddingVertical: 0,
+  },
+  resultsBox: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing[2],
+    overflow: "hidden",
+  },
+  resultRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    padding: spacing[3],
+  },
+  resultText: {
+    flex: 1,
+    ...typography.caption,
+    color: colors.text,
+    lineHeight: 18,
+  },
+  noResult: {
+    padding: spacing[3],
+    ...typography.caption,
+    color: colors.textMuted,
+    textAlign: "center",
+  },
   container: {
     borderRadius: radius.md,
     overflow: "hidden",

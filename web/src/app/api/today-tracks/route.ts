@@ -45,5 +45,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ tracks: data ?? [] });
+  // 滞在件数も返す（HomeScreen の「今日の記録」整合用）
+  const { count: staysCount } = await supabase
+    .from("location_stays")
+    .select("*", { count: "exact", head: true })
+    .eq("account_id", user.id)
+    .gte("ts_start", startIso)
+    .lt("ts_start", endIso);
+
+  const lastReceivedAt =
+    data && data.length > 0 ? data[data.length - 1].ts : null;
+
+  return NextResponse.json({
+    tracks: data ?? [],
+    staysCount: staysCount ?? 0,
+    lastReceivedAt,
+  });
 }

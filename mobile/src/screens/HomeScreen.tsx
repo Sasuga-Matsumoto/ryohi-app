@@ -31,7 +31,7 @@ import { pendingCount, fetchTodayTracks } from "../lib/queue";
 import { defineTasks } from "../lib/tasks";
 import {
   reportMobileStatus,
-  fetchTodayTracksFromServer,
+  fetchTodaySummaryFromServer,
   updateLocation,
 } from "../lib/health";
 import LocationPickerMap, {
@@ -107,20 +107,32 @@ export default function HomeScreen({ session }: { session: any }) {
 
     const p = await pendingCount();
     setPending(p);
-    const ts = await getTodayStats();
-    setTodayStats(ts);
-    // サーバを信頼ソースに（DevControls のモック投入もここで反映される）
-    // オフライン or サーバ未到達ならローカル SQLite にフォールバック
+
+    // サーバを信頼ソースに：今日の記録（経路点・滞在件数・最終受信時刻）+ 経路マップ
+    // オフライン時はローカル SQLite + AsyncStorage にフォールバック
     try {
-      const serverTracks = await fetchTodayTracksFromServer();
-      if (serverTracks && serverTracks.length > 0) {
-        setTodayTracks(serverTracks.map((r) => ({ lat: r.lat, lng: r.lng })));
+      const summary = await fetchTodaySummaryFromServer();
+      if (summary) {
+        setTodayTracks(summary.tracks.map((r) => ({ lat: r.lat, lng: r.lng })));
+        setTodayStats({
+          date: new Date(Date.now() + 9 * 3600 * 1000)
+            .toISOString()
+            .slice(0, 10),
+          trackCount: summary.tracks.length,
+          stayCount: summary.staysCount,
+          lastReceivedAt: summary.lastReceivedAt,
+        });
       } else {
+        // フォールバック: ローカル
         const local = await fetchTodayTracks();
         setTodayTracks(local.map((r) => ({ lat: r.lat, lng: r.lng })));
+        const ts = await getTodayStats();
+        setTodayStats(ts);
       }
     } catch (e) {
-      console.warn("[home] fetchTodayTracks failed", e);
+      console.warn("[home] fetchTodaySummary failed", e);
+      const ts = await getTodayStats();
+      setTodayStats(ts);
     }
     setStatus("ready");
   }, []);

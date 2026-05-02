@@ -74,9 +74,13 @@ export async function updateLocation(
   }
 }
 
-export async function fetchTodayTracksFromServer(): Promise<
-  Array<{ ts: string; lat: number; lng: number }> | null
-> {
+export interface TodaySummary {
+  tracks: Array<{ ts: string; lat: number; lng: number }>;
+  staysCount: number;
+  lastReceivedAt: string | null;
+}
+
+export async function fetchTodaySummaryFromServer(): Promise<TodaySummary | null> {
   try {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
@@ -90,11 +94,52 @@ export async function fetchTodayTracksFromServer(): Promise<
     }
     const body = (await res.json()) as {
       tracks?: Array<{ ts: string; lat: number; lng: number }>;
+      staysCount?: number;
+      lastReceivedAt?: string | null;
     };
-    return body.tracks ?? [];
+    return {
+      tracks: body.tracks ?? [],
+      staysCount: body.staysCount ?? 0,
+      lastReceivedAt: body.lastReceivedAt ?? null,
+    };
   } catch (e) {
     console.warn("[today-tracks] fetch failed", e);
     return null;
+  }
+}
+
+// 後方互換 alias
+export const fetchTodayTracksFromServer = async () => {
+  const s = await fetchTodaySummaryFromServer();
+  return s?.tracks ?? null;
+};
+
+export interface GeocodeResult {
+  lat: number;
+  lng: number;
+  display_name: string;
+}
+
+/**
+ * 住所・郵便番号・施設名で検索（Web の /api/geocode を経由・Nominatim プロキシ）
+ */
+export async function geocodeSearch(
+  query: string,
+): Promise<GeocodeResult[]> {
+  if (query.trim().length < 2) return [];
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return [];
+    const res = await fetch(
+      `${API_BASE_URL}/api/geocode?q=${encodeURIComponent(query.trim())}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!res.ok) return [];
+    const body = (await res.json()) as { results?: GeocodeResult[] };
+    return body.results ?? [];
+  } catch {
+    return [];
   }
 }
 
