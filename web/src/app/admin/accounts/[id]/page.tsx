@@ -22,13 +22,38 @@ export default async function AccountDetailPage({
   const { data: account } = await supabase
     .from("accounts")
     .select(
-      "id, email, name, company_name, role, status, suspended_at, suspended_reason, created_at, last_mobile_status, last_health_check_at",
+      "id, email, name, company_name, role, status, suspended_at, suspended_reason, created_at",
     )
     .eq("id", id)
     .maybeSingle();
 
   if (!account) {
     redirect("/admin");
+  }
+
+  // ヘルスチェック列は migration 0004 で追加。未適用環境でもページが落ちないよう独立クエリ + try-catch
+  let lastMobileStatus:
+    | "services_off"
+    | "no_permission"
+    | "fg_only"
+    | "no_setting"
+    | "ready"
+    | null = null;
+  let lastHealthCheckAt: string | null = null;
+  try {
+    const { data: health } = await supabase
+      .from("accounts")
+      .select("last_mobile_status, last_health_check_at")
+      .eq("id", id)
+      .maybeSingle();
+    if (health) {
+      lastMobileStatus = (health as { last_mobile_status: typeof lastMobileStatus })
+        .last_mobile_status;
+      lastHealthCheckAt = (health as { last_health_check_at: string | null })
+        .last_health_check_at;
+    }
+  } catch {
+    // migration 0004 未適用 → 「未報告」扱い
   }
 
   const { data: setting } = await supabase
@@ -55,13 +80,7 @@ export default async function AccountDetailPage({
           : { label: "勤務地未設定", tone: "warning" };
 
   // 位置情報ステータス（モバイル報告ベース）
-  const lastStatus = account.last_mobile_status as
-    | "services_off"
-    | "no_permission"
-    | "fg_only"
-    | "no_setting"
-    | "ready"
-    | null;
+  const lastStatus = lastMobileStatus;
   const permissionStatus: {
     label: string;
     tone: "success" | "warning" | "danger" | "muted";
@@ -83,8 +102,8 @@ export default async function AccountDetailPage({
       muted: "var(--text-muted)",
     })[t];
 
-  const lastCheckLabel = account.last_health_check_at
-    ? formatRelative(account.last_health_check_at)
+  const lastCheckLabel = lastHealthCheckAt
+    ? formatRelative(lastHealthCheckAt)
     : null;
 
   const monthStart = new Date();
@@ -169,11 +188,11 @@ export default async function AccountDetailPage({
           >
             {permissionStatus.label}
           </p>
-          {lastCheckLabel && (
+          {lastCheckLabel && lastHealthCheckAt && (
             <p
               className="text-xs text-muted"
               style={{ marginTop: 2 }}
-              title={new Date(account.last_health_check_at!).toLocaleString("ja-JP")}
+              title={new Date(lastHealthCheckAt).toLocaleString("ja-JP")}
             >
               {lastCheckLabel}
             </p>
