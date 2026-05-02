@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Alert,
   Linking,
+  Modal,
   Platform,
   AppState,
   type AppStateStatus,
@@ -28,7 +29,14 @@ import {
 } from "../lib/location";
 import { pendingCount, fetchTodayTracks } from "../lib/queue";
 import { defineTasks } from "../lib/tasks";
-import { reportMobileStatus, fetchTodayTracksFromServer } from "../lib/health";
+import {
+  reportMobileStatus,
+  fetchTodayTracksFromServer,
+  updateLocation,
+} from "../lib/health";
+import LocationPickerMap, {
+  type LatLng,
+} from "../components/LocationPickerMap";
 import { getTodayStats, type TodayStats } from "../lib/todayStats";
 import RouteMap from "../components/RouteMap";
 import { colors, spacing, radius, typography, shadows, TOUCH_MIN } from "../lib/theme";
@@ -46,13 +54,17 @@ type Status =
 
 export default function HomeScreen({ session }: { session: any }) {
   const [status, setStatus] = useState<Status>("loading");
-  const [, setSetting] = useState<AccountSetting | null>(null);
+  const [setting, setSetting] = useState<AccountSetting | null>(null);
   const [pending, setPending] = useState({ tracks: 0, stays: 0 });
   const [todayStats, setTodayStats] = useState<TodayStats | null>(null);
   const [todayTracks, setTodayTracks] = useState<
     { lat: number; lng: number }[]
   >([]);
   const [refreshing, setRefreshing] = useState(false);
+  // 自宅・勤務地ピッカー
+  const [pickerKind, setPickerKind] = useState<"home" | "work" | null>(null);
+  const [pickerSelection, setPickerSelection] = useState<LatLng | null>(null);
+  const [pickerSaving, setPickerSaving] = useState(false);
 
   const init = useCallback(async () => {
     defineTasks();
@@ -307,6 +319,37 @@ export default function HomeScreen({ session }: { session: any }) {
     await supabase.auth.signOut();
   };
 
+  const openPicker = (kind: "home" | "work") => {
+    const initial =
+      kind === "home"
+        ? setting?.home_lat != null && setting?.home_lng != null
+          ? { lat: setting.home_lat, lng: setting.home_lng }
+          : null
+        : setting?.work_lat != null && setting?.work_lng != null
+          ? { lat: setting.work_lat, lng: setting.work_lng }
+          : null;
+    setPickerSelection(initial);
+    setPickerKind(kind);
+  };
+
+  const closePicker = () => {
+    setPickerKind(null);
+    setPickerSelection(null);
+  };
+
+  const savePicker = async () => {
+    if (!pickerKind || !pickerSelection) return;
+    setPickerSaving(true);
+    const r = await updateLocation(pickerKind, pickerSelection);
+    setPickerSaving(false);
+    if (!r.ok) {
+      Alert.alert("保存失敗", r.error ?? "もう一度お試しください");
+      return;
+    }
+    closePicker();
+    await init();
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await init();
@@ -366,12 +409,54 @@ export default function HomeScreen({ session }: { session: any }) {
           />
         )}
         {status === "no_setting" && (
-          <WarningCard
-            title="自宅・勤務地の設定が必要です"
-            body="Web の設定画面で自宅と勤務地のエリアを地図上で指定してください（半径100m）。設定後、このアプリに戻ると自動で反映されます。"
-            buttonText="Web の設定画面を開く"
-            onPress={handleOpenWebSettings}
-          />
+          <View style={styles.warningCard}>
+            <View style={styles.warningHead}>
+              <Feather
+                name="alert-triangle"
+                color={colors.warningText}
+                size={18}
+              />
+              <Text style={styles.warningTitle}>
+                自宅・勤務地の設定が必要です
+              </Text>
+            </View>
+            <Text style={styles.warningBody}>
+              地図でエリア（半径100m）を指定してください。Web 設定画面でも同じことができます。
+            </Text>
+            <TouchableOpacity
+              onPress={() => openPicker("home")}
+              style={[styles.warningButton, { marginBottom: spacing[2] }]}
+              activeOpacity={0.85}
+            >
+              <Feather name="home" color={colors.white} size={16} />
+              <Text style={styles.warningButtonText}>自宅エリアを設定</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => openPicker("work")}
+              style={[styles.warningButton, { marginBottom: spacing[2] }]}
+              activeOpacity={0.85}
+            >
+              <Feather name="briefcase" color={colors.white} size={16} />
+              <Text style={styles.warningButtonText}>勤務地エリアを設定</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleOpenWebSettings}
+              style={[
+                styles.warningButton,
+                { backgroundColor: "transparent" },
+              ]}
+              activeOpacity={0.85}
+            >
+              <Text
+                style={[
+                  styles.warningButtonText,
+                  { color: colors.warningText },
+                ]}
+              >
+                Web の設定画面を開く
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* Web 設定画面ショートカット（ready 状態時に上部表示） */}
@@ -445,6 +530,58 @@ export default function HomeScreen({ session }: { session: any }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* 自宅・勤務地ピッカー Modal */}
+      <Modal
+        visible={pickerKind !== null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={closePicker}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+          <View style={styles.pickerHeader}>
+            <TouchableOpacity onPress={closePicker} hitSlop={12}>
+              <Text style={styles.pickerCancel}>キャンセル</Text>
+            </TouchableOpacity>
+            <Text style={styles.pickerTitle}>
+              {pickerKind === "home" ? "自宅エリアを設定" : "勤務地エリアを設定"}
+            </Text>
+            <TouchableOpacity
+              onPress={savePicker}
+              disabled={!pickerSelection || pickerSaving}
+              hitSlop={12}
+            >
+              <Text
+                style={[
+                  styles.pickerSave,
+                  (!pickerSelection || pickerSaving) && {
+                    color: colors.textDisabled,
+                  },
+                ]}
+              >
+                {pickerSaving ? "保存中…" : "保存"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.pickerBody}>
+            <Text style={styles.pickerHint}>
+              地図をタップしてピンを配置・ドラッグで微調整。半径100m が
+              {pickerKind === "home" ? "自宅" : "勤務地"}エリアになります。
+            </Text>
+            <LocationPickerMap
+              initial={pickerSelection}
+              onChange={setPickerSelection}
+              height={420}
+            />
+            {pickerSelection && (
+              <Text style={styles.pickerSelected}>
+                選択中: {pickerSelection.lat.toFixed(6)},{" "}
+                {pickerSelection.lng.toFixed(6)}
+              </Text>
+            )}
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -706,6 +843,46 @@ const styles = StyleSheet.create({
   warningButtonText: {
     color: colors.white,
     ...typography.bodyStrong,
+  },
+
+  // 自宅・勤務地ピッカー Modal
+  pickerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  pickerCancel: {
+    ...typography.body,
+    color: colors.textMuted,
+  },
+  pickerTitle: {
+    ...typography.bodyStrong,
+    color: colors.text,
+  },
+  pickerSave: {
+    ...typography.bodyStrong,
+    color: colors.primary,
+  },
+  pickerBody: {
+    flex: 1,
+    padding: spacing[4],
+  },
+  pickerHint: {
+    ...typography.caption,
+    color: colors.textLight,
+    lineHeight: 18,
+    marginBottom: spacing[3],
+  },
+  pickerSelected: {
+    ...typography.caption,
+    color: colors.text,
+    marginTop: spacing[3],
+    fontVariant: ["tabular-nums"],
   },
 
   // 今日の経路マップ

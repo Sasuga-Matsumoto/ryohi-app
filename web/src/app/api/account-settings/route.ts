@@ -3,10 +3,10 @@
  * 自分のアカウント設定を upsert する
  */
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getApiClient } from "@/lib/supabase/api-auth";
 
 export async function PUT(request: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await getApiClient(request);
   const {
     data: { user },
   } = await supabase.auth.getUser();

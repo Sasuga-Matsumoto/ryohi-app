@@ -41,6 +41,39 @@ export async function loadLastStatus(): Promise<MobileStatus | null> {
   }
 }
 
+/**
+ * account_settings の自宅 or 勤務地座標を更新する
+ */
+export async function updateLocation(
+  kind: "home" | "work",
+  latlng: { lat: number; lng: number },
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return { ok: false, error: "未ログイン" };
+    const body =
+      kind === "home"
+        ? { home_lat: latlng.lat, home_lng: latlng.lng }
+        : { work_lat: latlng.lat, work_lng: latlng.lng };
+    const res = await fetch(`${API_BASE_URL}/api/account-settings`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const b = await res.json().catch(() => ({}));
+      return { ok: false, error: b.error ?? `HTTP ${res.status}` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
 export async function fetchTodayTracksFromServer(): Promise<
   Array<{ ts: string; lat: number; lng: number }> | null
 > {
