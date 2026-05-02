@@ -6,7 +6,8 @@
 export type Role = "user" | "admin";
 export type AccountStatus = "active" | "suspended" | "deleted";
 export type TripDefinitionType = "hours" | "km";
-export type TripStatus = "auto_detected";
+export type TripStatus = "auto_detected" | "manual";
+export type EditSource = "manual_create" | "user_edit";
 export type LocationStaySource = "SLC" | "GF" | "MOCK";
 export type LocationTrackSource = "GPS" | "MOCK";
 export type AdminAction = "create" | "suspend" | "resume" | "delete" | "edit";
@@ -99,6 +100,8 @@ export interface Trip {
   is_excluded: boolean; // default false
   excluded_reason: string | null;
   updated_at: string;
+  edited_at?: string | null;
+  edit_source?: EditSource | null;
 }
 
 export interface Evidence {

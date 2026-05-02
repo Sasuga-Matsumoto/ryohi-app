@@ -4,7 +4,7 @@ import DevControls from "./DevControls";
 import TripRow from "./TripRow";
 import TripCard from "./TripCard";
 import OnboardingChecklist from "./OnboardingChecklist";
-import { SettingsIcon, RefreshIcon } from "@/components/Icon";
+import { SettingsIcon, RefreshIcon, PlusIcon } from "@/components/Icon";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -83,7 +83,7 @@ export default async function DashboardPage() {
   const { data: monthTrips } = await supabase
     .from("trips")
     .select(
-      "id, date, destination_label, visited_areas, depart_ts, return_ts, total_minutes, max_distance_km, purpose, is_excluded, excluded_reason"
+      "id, date, destination_label, visited_areas, depart_ts, return_ts, total_minutes, max_distance_km, purpose, is_excluded, excluded_reason, status, edit_source"
     )
     .eq("account_id", user.id)
     .gte("date", monthStartStr)
@@ -191,8 +191,23 @@ export default async function DashboardPage() {
         <div className="card" style={{ padding: 0 }}>
           <div className="card-header">
             <span>{ymLabel}の出張一覧</span>
-            <span className="text-muted text-xs">
-              {monthTrips?.length ?? 0} 件（除外含む）
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "var(--space-3)",
+              }}
+            >
+              <span className="text-muted text-xs">
+                {monthTrips?.length ?? 0} 件（除外含む）
+              </span>
+              <a
+                href="/dashboard/trips/new"
+                className="btn btn-secondary btn-sm"
+              >
+                <PlusIcon size={12} />
+                手動追加
+              </a>
             </span>
           </div>
           <div>

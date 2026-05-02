@@ -86,6 +86,24 @@ export default function TripCard({ trip }: { trip: TripRowData }) {
       <div className="trip-card-head">
         <span className="trip-card-date">
           {trip.date} ({jsDow(trip.date)})
+          {trip.edit_source === "manual_create" && (
+            <span
+              className="badge badge-info"
+              style={{ marginLeft: 6, fontSize: 10 }}
+              title="手動追加"
+            >
+              手動
+            </span>
+          )}
+          {trip.edit_source === "user_edit" && (
+            <span
+              className="badge badge-info"
+              style={{ marginLeft: 6, fontSize: 10 }}
+              title="修正済み"
+            >
+              修正済
+            </span>
+          )}
         </span>
         <a
           href={`/dashboard/trips/${trip.id}`}

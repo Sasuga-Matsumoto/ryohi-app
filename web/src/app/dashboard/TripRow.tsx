@@ -24,6 +24,8 @@ export type TripRowData = {
   purpose: string;
   is_excluded: boolean;
   excluded_reason?: string | null;
+  status?: "auto_detected" | "manual" | null;
+  edit_source?: "manual_create" | "user_edit" | null;
 };
 
 export default function TripRow({ trip }: { trip: TripRowData }) {
@@ -97,7 +99,27 @@ export default function TripRow({ trip }: { trip: TripRowData }) {
   return (
     <>
       <tr>
-        <td style={cellStyle} className="tabular">{trip.date}</td>
+        <td style={cellStyle} className="tabular">
+          {trip.date}
+          {trip.edit_source === "manual_create" && (
+            <span
+              className="badge badge-info"
+              style={{ marginLeft: 4, fontSize: 10 }}
+              title="手動追加"
+            >
+              手動
+            </span>
+          )}
+          {trip.edit_source === "user_edit" && (
+            <span
+              className="badge badge-info"
+              style={{ marginLeft: 4, fontSize: 10 }}
+              title="修正済み"
+            >
+              修正済
+            </span>
+          )}
+        </td>
         <td style={cellStyle}>{trip.destination_label ?? "—"}</td>
         <td style={cellStyle} className="tabular">{departTime}</td>
         <td style={cellStyle} className="tabular">{returnTime}</td>
