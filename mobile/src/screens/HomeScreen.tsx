@@ -28,6 +28,7 @@ import {
 } from "../lib/location";
 import { pendingCount } from "../lib/queue";
 import { defineTasks } from "../lib/tasks";
+import { reportMobileStatus } from "../lib/health";
 import { colors, spacing, radius, typography, shadows, TOUCH_MIN } from "../lib/theme";
 
 const WEB_BASE_URL = "https://ryohi-app.vercel.app";
@@ -105,6 +106,15 @@ export default function HomeScreen({ session }: { session: any }) {
     });
     return () => sub.remove();
   }, [init]);
+
+  // status が変わるたびに Web に報告（Admin の「位置情報」KPI 用）
+  const reportedStatusRef = useRef<Status | null>(null);
+  useEffect(() => {
+    if (status === "loading") return;
+    if (reportedStatusRef.current === status) return;
+    reportedStatusRef.current = status;
+    void reportMobileStatus(status);
+  }, [status]);
 
   // 連打や handler 並行実行を防ぐ
   const navBusyRef = useRef(false);
