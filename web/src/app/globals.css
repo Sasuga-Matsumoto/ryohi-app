@@ -753,3 +753,145 @@ textarea:focus-visible {
   to { opacity: 1; transform: translateY(0); }
 }
 .fade-in-up { animation: fadeInUp 320ms ease both; }
+
+/* ============================================================
+   Settings toolbar (sticky save bar at top)
+   ============================================================ */
+.settings-toolbar {
+  position: sticky;
+  top: 60px; /* 下に AppHeader 60px が居る */
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: saturate(180%) blur(10px);
+  -webkit-backdrop-filter: saturate(180%) blur(10px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+.settings-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+}
+.settings-toolbar-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-light);
+  min-width: 0;
+}
+.settings-toolbar-status-saved {
+  color: var(--success);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.settings-toolbar-status-dirty {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--warning);
+  font-weight: 600;
+}
+.settings-toolbar-status-dirty::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--warning);
+  display: inline-block;
+  animation: pulseDot 1.6s ease-in-out infinite;
+}
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.85); }
+}
+.settings-toolbar-status-error { color: var(--danger); font-weight: 600; }
+@media (max-width: 640px) {
+  .settings-toolbar {
+    top: calc(60px + env(safe-area-inset-top, 0px));
+    padding: var(--space-3);
+  }
+  .settings-toolbar .btn { width: 100%; }
+  .settings-toolbar-left { width: 100%; }
+}
+
+/* ============================================================
+   Settings layout grouping
+   ============================================================ */
+.settings-group-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-4);
+}
+.settings-group-title {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text-strong);
+  letter-spacing: -0.005em;
+}
+.settings-group-overline {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+.settings-group-divider {
+  margin: var(--space-8) 0 var(--space-4);
+}
+/* 2-column grid for small rule cards on wide screens */
+.settings-rules-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 960px) {
+  .settings-rules-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* Section title size lower (since group has higher) */
+.settings-form .section-title {
+  font-size: var(--text-base);
+  margin-bottom: var(--space-3);
+}
+
+/* Save success toast */
+.save-toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  background: var(--success);
+  color: white;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  z-index: var(--z-toast);
+  animation: fadeInUp 240ms ease both;
+}
+@media (max-width: 640px) {
+  .save-toast {
+    left: var(--space-4);
+    right: var(--space-4);
+    bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+    justify-content: center;
+  }
+}
