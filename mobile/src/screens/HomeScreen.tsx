@@ -103,34 +103,120 @@ export default function HomeScreen({ session }: { session: any }) {
     return () => sub.remove();
   }, [init]);
 
-  const handleOpenLocationSettings = async () => {
-    if (Platform.OS === "android") {
-      try {
-        await Linking.sendIntent("android.settings.LOCATION_SOURCE_SETTINGS");
-        return;
-      } catch (e) {
-        console.warn("[home] sendIntent failed, falling back", e);
-      }
+  // ボタン連打や handler 並行実行を防ぐ
+  const navBusyRef = useRef(false);
+
+  const safeOpenSettings = async () => {
+    try {
+      await Linking.openSettings();
+    } catch (e) {
+      console.warn("[home] openSettings failed", e);
     }
-    await Linking.openSettings();
+  };
+
+  const handleOpenLocationSettings = async () => {
+    if (navBusyRef.current) return;
+    navBusyRef.current = true;
+    try {
+      if (Platform.OS === "android") {
+        try {
+          await Linking.sendIntent("android.settings.LOCATION_SOURCE_SETTINGS");
+          return;
+        } catch (e) {
+          console.warn("[home] sendIntent failed, falling back", e);
+        }
+      }
+      await safeOpenSettings();
+    } finally {
+      // OS 復帰後に再タップできるよう少し遅延
+      setTimeout(() => {
+        navBusyRef.current = false;
+      }, 500);
+    }
   };
 
   const handleOpenAppPermissionSettings = async () => {
-    await Linking.openSettings();
+    if (navBusyRef.current) return;
+    navBusyRef.current = true;
+    try {
+      // 公開 API で「位置情報の権限詳細画面」に直接飛ぶインテントは無いが、
+      // canAskAgain=true の間は requestPermissionsAsync で OS が詳細画面に navigate してくれる。
+      // canAskAgain=false（Don't Allow を重ねた状態）or ダイアログ拒否時は App Info にフォールバック。
+      let fg;
+      try {
+        fg = await Location.getForegroundPermissionsAsync();
+      } catch (e) {
+        console.warn("[home] getFg failed", e);
+        await safeOpenSettings();
+        return;
+      }
+
+      if (fg.status !== "granted" && fg.canAskAgain) {
+        try {
+          const r = await Location.requestForegroundPermissionsAsync();
+          if (r.status !== "granted") {
+            await safeOpenSettings();
+            return;
+          }
+        } catch (e) {
+          console.warn("[home] requestFg failed", e);
+          await safeOpenSettings();
+          return;
+        }
+      }
+
+      let bg;
+      try {
+        bg = await Location.getBackgroundPermissionsAsync();
+      } catch (e) {
+        console.warn("[home] getBg failed", e);
+        await safeOpenSettings();
+        return;
+      }
+
+      if (bg.status !== "granted" && bg.canAskAgain) {
+        try {
+          await Location.requestBackgroundPermissionsAsync();
+        } catch (e) {
+          console.warn("[home] requestBg failed", e);
+        }
+        // OS が settings に navigate したかを AppState で判定し、二重ナビを防ぐ
+        await new Promise((res) => setTimeout(res, 400));
+        if (AppState.currentState !== "active") return;
+        // OS が何もしなかった（死にボタン回避）→ App Info にフォールバック
+      }
+
+      await safeOpenSettings();
+    } finally {
+      setTimeout(() => {
+        navBusyRef.current = false;
+      }, 500);
+    }
   };
 
   const handleOpenWebSettings = async () => {
-    // 自動ログインを通すため、現在の access/refresh トークンを hash 部に乗せる
-    const { data: { session: cur } } = await supabase.auth.getSession();
-    if (cur?.access_token && cur?.refresh_token) {
+    if (navBusyRef.current) return;
+    navBusyRef.current = true;
+    try {
+      // 自動ログインを通すため、現在の access/refresh トークンを hash 部に乗せる
+      const { data: { session: cur } } = await supabase.auth.getSession();
+      const fallbackUrl = `${WEB_BASE_URL}${WEB_SETTINGS_PATH}`;
       const url =
-        `${WEB_BASE_URL}/auth/from-mobile` +
-        `#access_token=${encodeURIComponent(cur.access_token)}` +
-        `&refresh_token=${encodeURIComponent(cur.refresh_token)}` +
-        `&next=${encodeURIComponent(WEB_SETTINGS_PATH)}`;
-      await Linking.openURL(url);
-    } else {
-      await Linking.openURL(`${WEB_BASE_URL}${WEB_SETTINGS_PATH}`);
+        cur?.access_token && cur?.refresh_token
+          ? `${WEB_BASE_URL}/auth/from-mobile` +
+            `#access_token=${encodeURIComponent(cur.access_token)}` +
+            `&refresh_token=${encodeURIComponent(cur.refresh_token)}` +
+            `&next=${encodeURIComponent(WEB_SETTINGS_PATH)}`
+          : fallbackUrl;
+      try {
+        await Linking.openURL(url);
+      } catch (e) {
+        console.warn("[home] openURL failed", e);
+      }
+    } finally {
+      setTimeout(() => {
+        navBusyRef.current = false;
+      }, 500);
     }
   };
 
@@ -166,16 +252,15 @@ export default function HomeScreen({ session }: { session: any }) {
       },
       no_permission: {
         title: "位置情報の許可が必要です",
-        message:
-          "設定画面を開き、「権限 → 位置情報 → 常に許可」を選んでください。",
-        buttonText: "設定画面を開く",
+        message: "権限画面で「常に許可」を選んでください。",
+        buttonText: "権限画面を開く",
         onPress: handleOpenAppPermissionSettings,
       },
       fg_only: {
         title: "「常に許可」が必要です",
         message:
-          "「使用中のみ」では出張ログを記録できません。設定画面を開き、「権限 → 位置情報 → 常に許可」を選んでください。",
-        buttonText: "設定画面を開く",
+          "「使用中のみ」では出張ログを記録できません。権限画面で「常に許可」を選んでください。",
+        buttonText: "権限画面を開く",
         onPress: handleOpenAppPermissionSettings,
       },
       no_setting: {
@@ -241,13 +326,13 @@ export default function HomeScreen({ session }: { session: any }) {
         <View style={styles.warningCard}>
           <Text style={styles.warningTitle}>位置情報の許可が必要です</Text>
           <Text style={styles.warningBody}>
-            下のボタンから設定画面を開き、「権限 → 位置情報 → 常に許可」を選んでください。
+            下のボタンを押すと位置情報の権限画面に移動します。「常に許可」を選んでください。
           </Text>
           <TouchableOpacity
-            onPress={() => Linking.openSettings()}
+            onPress={handleOpenAppPermissionSettings}
             style={styles.warningButton}
           >
-            <Text style={styles.warningButtonText}>設定画面を開く</Text>
+            <Text style={styles.warningButtonText}>権限画面を開く</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -256,13 +341,13 @@ export default function HomeScreen({ session }: { session: any }) {
         <View style={styles.warningCard}>
           <Text style={styles.warningTitle}>「常に許可」が必要です</Text>
           <Text style={styles.warningBody}>
-            「使用中のみ」では出張ログを記録できません。下のボタンから設定画面を開き、「権限 → 位置情報 → 常に許可」を選んでください。
+            「使用中のみ」では出張ログを記録できません。下のボタンを押すと位置情報の権限画面に移動するので「常に許可」を選んでください。
           </Text>
           <TouchableOpacity
-            onPress={() => Linking.openSettings()}
+            onPress={handleOpenAppPermissionSettings}
             style={styles.warningButton}
           >
-            <Text style={styles.warningButtonText}>設定画面を開く</Text>
+            <Text style={styles.warningButtonText}>権限画面を開く</Text>
           </TouchableOpacity>
         </View>
       )}
