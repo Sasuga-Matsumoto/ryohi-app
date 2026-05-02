@@ -161,12 +161,16 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
         </div>
 
         {/* グループ 1: ベース設定（自宅・勤務地） */}
-        <div className="settings-group-header">
-          <span className="settings-group-overline">Step 1</span>
-          <h2 className="settings-group-title">ベース設定</h2>
-          <span className="text-sm text-muted" style={{ marginLeft: "auto" }}>
-            自宅と勤務地のエリアを地図で指定
+        <div className="settings-group-header" aria-label="Step 1">
+          <span className="settings-group-step" aria-hidden="true">
+            1
           </span>
+          <div className="settings-group-text">
+            <h2 className="settings-group-title">ベース設定</h2>
+            <span className="settings-group-hint">
+              自宅と勤務地のエリアを地図で指定
+            </span>
+          </div>
         </div>
 
         <section className="card" aria-labelledby="sec-home">
@@ -210,12 +214,17 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
         </section>
 
         {/* グループ 2: 判定ルール（2 列グリッド） */}
-        <div className="settings-group-header settings-group-divider">
-          <span className="settings-group-overline">Step 2</span>
-          <h2 className="settings-group-title">判定ルール</h2>
-          <span className="text-sm text-muted" style={{ marginLeft: "auto" }}>
-            出張の自動判定方法を調整
+        <div
+          className="settings-group-header settings-group-divider"
+          aria-label="Step 2"
+        >
+          <span className="settings-group-step" aria-hidden="true">
+            2
           </span>
+          <div className="settings-group-text">
+            <h2 className="settings-group-title">判定ルール</h2>
+            <span className="settings-group-hint">出張の自動判定方法を調整</span>
+          </div>
         </div>
 
         <div className="settings-rules-grid">
