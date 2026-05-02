@@ -68,6 +68,7 @@ function buildLeafletHtml(tracks: LatLng[]): string {
     html, body, #map { margin: 0; padding: 0; height: 100%; }
     body { background: #F4F6FB; }
     .leaflet-container { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif; }
+    .route-arrow { background: transparent !important; border: none !important; }
   </style>
 </head>
 <body>
@@ -80,6 +81,88 @@ function buildLeafletHtml(tracks: LatLng[]): string {
   <script>
     (function () {
       const points = ${JSON.stringify(points)};
+
+      // ─── ヘルパー ───
+      function haversineKm(la1, ln1, la2, ln2) {
+        const toRad = (d) => (d * Math.PI) / 180;
+        const dLat = toRad(la2 - la1);
+        const dLng = toRad(ln2 - ln1);
+        const a =
+          Math.sin(dLat / 2) ** 2 +
+          Math.cos(toRad(la1)) * Math.cos(toRad(la2)) * Math.sin(dLng / 2) ** 2;
+        return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+      function bearingDeg(la1, ln1, la2, ln2) {
+        const toRad = (d) => (d * Math.PI) / 180;
+        const toDeg = (r) => (r * 180) / Math.PI;
+        const phi1 = toRad(la1);
+        const phi2 = toRad(la2);
+        const dl = toRad(ln2 - ln1);
+        const y = Math.sin(dl) * Math.cos(phi2);
+        const x =
+          Math.cos(phi1) * Math.sin(phi2) -
+          Math.sin(phi1) * Math.cos(phi2) * Math.cos(dl);
+        return (toDeg(Math.atan2(y, x)) + 360) % 360;
+      }
+      function pickArrows(pts, intervalKm) {
+        if (pts.length < 2) return [];
+        const arr = [];
+        let cum = 0;
+        for (let i = 1; i < pts.length; i++) {
+          const seg = haversineKm(pts[i-1][0], pts[i-1][1], pts[i][0], pts[i][1]);
+          if (seg < 0.001) continue;
+          cum += seg;
+          if (cum >= intervalKm) {
+            const b = bearingDeg(pts[i-1][0], pts[i-1][1], pts[i][0], pts[i][1]);
+            arr.push([
+              (pts[i-1][0] + pts[i][0]) / 2,
+              (pts[i-1][1] + pts[i][1]) / 2,
+              b,
+            ]);
+            cum = 0;
+          }
+        }
+        return arr;
+      }
+      function pickKmMilestones(pts) {
+        if (pts.length < 2) return [];
+        const ms = [];
+        let cum = 0;
+        let total = 0;
+        for (let i = 1; i < pts.length; i++) {
+          const seg = haversineKm(pts[i-1][0], pts[i-1][1], pts[i][0], pts[i][1]);
+          cum += seg;
+          total += seg;
+          if (cum >= 1) {
+            ms.push([pts[i][0], pts[i][1], Math.round(total * 10) / 10]);
+            cum = 0;
+          }
+        }
+        return ms;
+      }
+      function arrowIcon(bearing) {
+        return L.divIcon({
+          className: 'route-arrow',
+          html: '<div style="transform: rotate(' + bearing + 'deg); width:22px;height:22px;display:flex;align-items:center;justify-content:center;">'
+              + '<svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
+              + '<path d="M12 2 L20 18 L12 14 L4 18 Z" fill="#DC2626" stroke="#FFFFFF" stroke-width="1.5" stroke-linejoin="round"/>'
+              + '</svg></div>',
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
+        });
+      }
+      function kmPinIcon(km) {
+        const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="25" height="41" viewBox="0 0 25 41">'
+                  + '<path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5s12.5-19.1 12.5-28.5C25 5.6 19.4 0 12.5 0z" fill="#DC2626" stroke="#7F1D1D" stroke-width="1"/>'
+                  + '<circle cx="12.5" cy="12.5" r="5" fill="#FFFFFF"/></svg>';
+        return L.icon({
+          iconUrl: 'data:image/svg+xml;base64,' + btoa(svg),
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+        });
+      }
+
+      // ─── マップ初期化 ───
       const map = L.map('map', { zoomControl: true, attributionControl: true });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap',
@@ -87,39 +170,31 @@ function buildLeafletHtml(tracks: LatLng[]): string {
       }).addTo(map);
 
       if (points.length > 0) {
-        L.polyline(points, {
-          color: '#3366FF',
-          weight: 3,
-          opacity: 0.8,
-        }).addTo(map);
-        // 始点・終点ハイライト
-        L.circleMarker(points[0], {
-          radius: 6,
-          color: '#1E3A8A',
-          fillColor: '#FFFFFF',
-          fillOpacity: 1,
-          weight: 2,
-        }).bindTooltip('始点', { permanent: false }).addTo(map);
-        if (points.length > 1) {
-          L.circleMarker(points[points.length - 1], {
-            radius: 6,
-            color: '#3366FF',
-            fillColor: '#3366FF',
-            fillOpacity: 1,
-            weight: 2,
-          }).bindTooltip('現在地', { permanent: false }).addTo(map);
-        }
-        // 中間の通過点（軽量に）
-        const step = Math.max(1, Math.floor(points.length / 50));
-        for (let i = step; i < points.length - 1; i += step) {
-          L.circleMarker(points[i], {
-            radius: 2,
-            color: '#3366FF',
-            fillColor: '#3366FF',
-            fillOpacity: 0.7,
+        // 1. Polyline (青いルート)
+        L.polyline(points, { color: '#3366FF', weight: 3, opacity: 0.7 }).addTo(map);
+
+        // 2. 200m 間隔のドット（小さい赤丸）
+        points.forEach((p) => {
+          L.circleMarker(p, {
+            radius: 3,
+            color: '#DC2626',
+            fillColor: '#DC2626',
+            fillOpacity: 0.85,
             weight: 1,
           }).addTo(map);
-        }
+        });
+
+        // 3. 0.5km ごとに進行方向の矢印
+        pickArrows(points, 0.5).forEach((a) => {
+          L.marker([a[0], a[1]], { icon: arrowIcon(a[2]) }).addTo(map);
+        });
+
+        // 4. 1km ごとに赤ピン（ツールチップで距離表示）
+        pickKmMilestones(points).forEach((m) => {
+          L.marker([m[0], m[1]], { icon: kmPinIcon(m[2]) })
+            .bindTooltip(m[2] + 'km', { permanent: false })
+            .addTo(map);
+        });
 
         if (points.length === 1) {
           map.setView(points[0], 14);
