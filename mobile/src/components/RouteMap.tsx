@@ -176,11 +176,11 @@ function buildLeafletHtml(tracks: LatLng[]): string {
         // 2. 200m 間隔のドット（小さい赤丸）
         points.forEach((p) => {
           L.circleMarker(p, {
-            radius: 3,
+            radius: 1.5,
             color: '#DC2626',
             fillColor: '#DC2626',
             fillOpacity: 0.85,
-            weight: 1,
+            weight: 0.5,
           }).addTo(map);
         });
 
