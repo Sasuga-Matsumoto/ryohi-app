@@ -2,7 +2,13 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/supabase/admin-guard";
 import { createClient } from "@/lib/supabase/server";
 import AccountActions from "./AccountActions";
-import { ArrowLeftIcon } from "@/components/Icon";
+import {
+  ArrowLeftIcon,
+  UserIcon,
+  ListIcon,
+  SettingsIcon,
+} from "@/components/Icon";
+import StatusPill from "@/components/StatusPill";
 
 export default async function AccountDetailPage({
   params,
@@ -16,7 +22,7 @@ export default async function AccountDetailPage({
   const { data: account } = await supabase
     .from("accounts")
     .select(
-      "id, email, name, company_name, role, status, suspended_at, suspended_reason, created_at"
+      "id, email, name, company_name, role, status, suspended_at, suspended_reason, created_at",
     )
     .eq("id", id)
     .maybeSingle();
@@ -25,16 +31,14 @@ export default async function AccountDetailPage({
     redirect("/admin");
   }
 
-  // 設定取得
   const { data: setting } = await supabase
     .from("account_settings")
     .select(
-      "trip_definition_type, trip_threshold_hours, trip_threshold_km, business_hours_enabled, business_hours_start, business_hours_end, include_holidays, include_weekends, work_lat, home_lat"
+      "trip_definition_type, trip_threshold_hours, trip_threshold_km, business_hours_enabled, business_hours_start, business_hours_end, include_holidays, include_weekends, work_lat, home_lat",
     )
     .eq("account_id", id)
     .maybeSingle();
 
-  // 当月 Trip 件数
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
@@ -45,137 +49,170 @@ export default async function AccountDetailPage({
     .gte("date", monthStart.toISOString().slice(0, 10))
     .eq("is_excluded", false);
 
-  // 累計
   const { count: totalTripCount } = await supabase
     .from("trips")
     .select("*", { count: "exact", head: true })
     .eq("account_id", id);
 
   const onboarded = setting?.work_lat != null && setting?.home_lat != null;
-
-  const statusLabel = (s: string) => {
-    if (s === "active") return "✓ アクティブ";
-    if (s === "suspended") return "🔴 停止中";
-    return "⚫ 削除済";
-  };
-  const statusColor = (s: string) => {
-    if (s === "active") return "var(--success)";
-    if (s === "suspended") return "var(--warning)";
-    return "var(--gray)";
-  };
+  const createdLabel = new Date(account.created_at).toLocaleDateString("ja-JP", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
   return (
     <main className="container page">
       <div className="breadcrumb">
         <a href="/admin">
-          <ArrowLeftIcon size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />
+          <ArrowLeftIcon
+            size={12}
+            style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }}
+          />
           Admin Console
         </a>
       </div>
+
       <header className="page-header">
         <div>
-          <h1 className="page-title">{account.name}</h1>
-          <p className="page-subtitle">{account.email} / {account.company_name}</p>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-3)",
+              flexWrap: "wrap",
+            }}
+          >
+            <h1 className="page-title">{account.name}</h1>
+            <StatusPill status={account.status} />
+          </div>
+          <p className="page-subtitle">
+            {account.email} ・ {account.company_name}
+          </p>
         </div>
       </header>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "2fr 1fr",
-          gap: 20,
-        }}
+      {/* 利用状況 KPI */}
+      <section
+        className="kpi-inline"
+        style={{ marginBottom: "var(--space-6)" }}
       >
-        {/* 左: 基本情報 + 利用状況 */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div className="kpi-inline-item">
+          <p className="kpi-inline-label">オンボーディング</p>
+          <p className="kpi-inline-value">
+            {onboarded ? (
+              <span style={{ color: "var(--success)" }}>完了</span>
+            ) : (
+              <span style={{ color: "var(--warning)" }}>未完了</span>
+            )}
+          </p>
+        </div>
+        <div className="kpi-inline-item">
+          <p className="kpi-inline-label">当月の出張</p>
+          <p className="kpi-inline-value">
+            {monthTripCount ?? 0}
+            <span className="kpi-inline-value-suffix">件</span>
+          </p>
+        </div>
+        <div className="kpi-inline-item">
+          <p className="kpi-inline-label">累計の出張</p>
+          <p className="kpi-inline-value">
+            {totalTripCount ?? 0}
+            <span className="kpi-inline-value-suffix">件</span>
+          </p>
+        </div>
+        <div className="kpi-inline-item">
+          <p className="kpi-inline-label">利用開始</p>
+          <p
+            className="kpi-inline-value"
+            style={{ fontSize: "var(--text-base)", fontWeight: 600 }}
+          >
+            {createdLabel}
+          </p>
+        </div>
+      </section>
+
+      <div className="page-cols page-cols-2-1">
+        {/* 左: 基本情報 + 設定 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
           <section className="card">
-            <h2 style={{ fontSize: "1rem", marginBottom: 12 }}>基本情報</h2>
-            <dl
-              style={{
-                display: "grid",
-                gridTemplateColumns: "120px 1fr",
-                rowGap: 10,
-                fontSize: "0.9rem",
-              }}
+            <h2
+              className="section-title"
+              style={{ display: "flex", alignItems: "center", gap: 8 }}
             >
-              <dt style={{ color: "var(--text-light)" }}>ID</dt>
-              <dd style={{ fontFamily: "monospace", fontSize: "0.8rem" }}>
-                {account.id}
+              <UserIcon size={18} /> 基本情報
+            </h2>
+            <dl className="def-list">
+              <dt>ID</dt>
+              <dd>
+                <span className="text-mono">{account.id}</span>
               </dd>
-              <dt style={{ color: "var(--text-light)" }}>氏名</dt>
+              <dt>氏名</dt>
               <dd>{account.name}</dd>
-              <dt style={{ color: "var(--text-light)" }}>メール</dt>
+              <dt>メール</dt>
               <dd>{account.email}</dd>
-              <dt style={{ color: "var(--text-light)" }}>会社名</dt>
+              <dt>会社名</dt>
               <dd>{account.company_name}</dd>
-              <dt style={{ color: "var(--text-light)" }}>ロール</dt>
+              <dt>ロール</dt>
               <dd>{account.role}</dd>
-              <dt style={{ color: "var(--text-light)" }}>状態</dt>
-              <dd style={{ color: statusColor(account.status), fontWeight: 600 }}>
-                {statusLabel(account.status)}
+              <dt>状態</dt>
+              <dd>
+                <StatusPill status={account.status} />
                 {account.status === "suspended" && account.suspended_at && (
                   <span
-                    style={{
-                      marginLeft: 8,
-                      color: "var(--text-light)",
-                      fontWeight: 400,
-                      fontSize: "0.85rem",
-                    }}
+                    className="text-xs text-muted"
+                    style={{ display: "block", marginTop: 4 }}
                   >
-                    （{new Date(account.suspended_at).toLocaleDateString("ja-JP")}
-                    {account.suspended_reason && ` / ${account.suspended_reason}`}）
+                    {new Date(account.suspended_at).toLocaleDateString("ja-JP")}
+                    {account.suspended_reason && ` ・ ${account.suspended_reason}`}
                   </span>
                 )}
               </dd>
-              <dt style={{ color: "var(--text-light)" }}>利用開始</dt>
-              <dd>{new Date(account.created_at).toLocaleDateString("ja-JP")}</dd>
+              <dt>利用開始</dt>
+              <dd>{createdLabel}</dd>
             </dl>
           </section>
 
-          <section className="card">
-            <h2 style={{ fontSize: "1rem", marginBottom: 12 }}>利用状況</h2>
-            <dl
-              style={{
-                display: "grid",
-                gridTemplateColumns: "120px 1fr",
-                rowGap: 10,
-                fontSize: "0.9rem",
-              }}
-            >
-              <dt style={{ color: "var(--text-light)" }}>オンボーディング</dt>
-              <dd>{onboarded ? "✓ 完了" : "未完了"}</dd>
-              <dt style={{ color: "var(--text-light)" }}>当月の出張</dt>
-              <dd>{monthTripCount ?? 0} 件</dd>
-              <dt style={{ color: "var(--text-light)" }}>累計の出張</dt>
-              <dd>{totalTripCount ?? 0} 件</dd>
-              {setting && (
-                <>
-                  <dt style={{ color: "var(--text-light)" }}>出張定義</dt>
-                  <dd>
-                    {setting.trip_definition_type === "hours"
-                      ? `時間モード ${setting.trip_threshold_hours}h`
-                      : `距離モード ${setting.trip_threshold_km}km`}
-                  </dd>
-                  <dt style={{ color: "var(--text-light)" }}>業務時間</dt>
-                  <dd>
-                    {setting.business_hours_enabled
-                      ? `${setting.business_hours_start} - ${setting.business_hours_end}`
-                      : "設定なし（24時間）"}
-                  </dd>
-                  <dt style={{ color: "var(--text-light)" }}>休日</dt>
-                  <dd>
-                    {setting.include_weekends ? "土日含む" : "土日除外"} /{" "}
-                    {setting.include_holidays ? "祝日含む" : "祝日除外"}
-                  </dd>
-                </>
-              )}
-            </dl>
-          </section>
+          {setting && (
+            <section className="card">
+              <h2
+                className="section-title"
+                style={{ display: "flex", alignItems: "center", gap: 8 }}
+              >
+                <SettingsIcon size={18} /> 判定設定
+              </h2>
+              <dl className="def-list">
+                <dt>出張定義</dt>
+                <dd>
+                  {setting.trip_definition_type === "hours"
+                    ? `時間モード ${setting.trip_threshold_hours}h 以上`
+                    : `距離モード ${setting.trip_threshold_km}km 以上`}
+                </dd>
+                <dt>業務時間</dt>
+                <dd>
+                  {setting.business_hours_enabled
+                    ? `${setting.business_hours_start} - ${setting.business_hours_end}`
+                    : "設定なし（24時間）"}
+                </dd>
+                <dt>休日</dt>
+                <dd>
+                  {setting.include_weekends ? "土日含む" : "土日除外"}{" "}
+                  ・{" "}
+                  {setting.include_holidays ? "祝日含む" : "祝日除外"}
+                </dd>
+              </dl>
+            </section>
+          )}
         </div>
 
         {/* 右: 操作 */}
         <div className="card" style={{ alignSelf: "start" }}>
-          <h2 style={{ fontSize: "1rem", marginBottom: 12 }}>操作</h2>
+          <h2
+            className="section-title"
+            style={{ display: "flex", alignItems: "center", gap: 8 }}
+          >
+            <ListIcon size={18} /> 操作
+          </h2>
           <AccountActions
             accountId={account.id}
             accountName={account.name}

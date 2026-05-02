@@ -7,6 +7,8 @@ import {
   ChevronRightIcon,
   ShieldIcon,
 } from "@/components/Icon";
+import StatusPill from "@/components/StatusPill";
+import AccountListItem from "./AccountListItem";
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -46,18 +48,6 @@ export default async function AdminPage() {
     deleted: accounts?.filter((a) => a.status === "deleted").length ?? 0,
   };
 
-  const statusBadge = (status: string) => {
-    const cls =
-      status === "active"
-        ? "badge-active"
-        : status === "suspended"
-          ? "badge-suspended"
-          : "badge-deleted";
-    const label =
-      status === "active" ? "アクティブ" : status === "suspended" ? "停止中" : "削除済";
-    return <span className={`badge ${cls}`}>{label}</span>;
-  };
-
   return (
     <main className="container page">
       <header className="page-header">
@@ -77,7 +67,9 @@ export default async function AdminPage() {
             <ShieldIcon size={12} /> ADMIN CONSOLE
           </p>
           <h1 className="page-title">運営ダッシュボード</h1>
-          <p className="page-subtitle">アカウントの発行・停止・削除と監査ログ管理</p>
+          <p className="page-subtitle">
+            アカウントの発行・停止・削除と監査ログ管理
+          </p>
         </div>
         <nav className="row">
           <a href="/admin/audit-log" className="btn btn-secondary">
@@ -92,7 +84,10 @@ export default async function AdminPage() {
       </header>
 
       {/* サマリ */}
-      <section className="grid grid-4" style={{ marginBottom: "var(--space-6)" }}>
+      <section
+        className="grid grid-4 kpi-grid"
+        style={{ marginBottom: "var(--space-6)" }}
+      >
         <div className="card">
           <p className="stat-label">全顧客</p>
           <p className="stat-value">{summary.total}</p>
@@ -119,37 +114,58 @@ export default async function AdminPage() {
           </span>
           <span className="text-muted text-xs">{summary.total} 件</span>
         </div>
-        <div style={{ overflowX: "auto" }}>
+        <div>
           {accounts && accounts.length > 0 ? (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>氏名</th>
-                  <th>メール</th>
-                  <th>会社</th>
-                  <th>ロール</th>
-                  <th>状態</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
+            <>
+              {/* Desktop: table */}
+              <div
+                className="account-table-wrap"
+                style={{ overflowX: "auto" }}
+              >
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>氏名</th>
+                      <th>メール</th>
+                      <th>会社</th>
+                      <th>ロール</th>
+                      <th>状態</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {accounts.map((a) => (
+                      <tr key={a.id}>
+                        <td>
+                          <strong>{a.name}</strong>
+                        </td>
+                        <td className="text-muted">{a.email}</td>
+                        <td>{a.company_name}</td>
+                        <td className="text-sm text-muted">{a.role}</td>
+                        <td>
+                          <StatusPill status={a.status} />
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <a
+                            href={`/admin/accounts/${a.id}`}
+                            className="btn btn-ghost btn-sm"
+                          >
+                            詳細
+                            <ChevronRightIcon size={12} />
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Mobile: cards */}
+              <div className="account-card-list">
                 {accounts.map((a) => (
-                  <tr key={a.id}>
-                    <td><strong>{a.name}</strong></td>
-                    <td className="text-muted">{a.email}</td>
-                    <td>{a.company_name}</td>
-                    <td className="text-sm text-muted">{a.role}</td>
-                    <td>{statusBadge(a.status)}</td>
-                    <td style={{ textAlign: "right" }}>
-                      <a href={`/admin/accounts/${a.id}`} className="btn btn-ghost btn-sm">
-                        詳細
-                        <ChevronRightIcon size={12} />
-                      </a>
-                    </td>
-                  </tr>
+                  <AccountListItem key={a.id} account={a} />
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           ) : (
             <div
               style={{

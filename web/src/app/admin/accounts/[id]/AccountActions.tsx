@@ -2,6 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  PowerIcon,
+  RefreshIcon,
+  TrashIcon,
+  AlertTriangleIcon,
+  CheckIcon,
+} from "@/components/Icon";
 
 type Action = "suspend" | "resume" | "delete";
 
@@ -58,9 +65,12 @@ export default function AccountActions({
 
   if (status === "deleted") {
     return (
-      <p style={{ color: "var(--text-light)", fontSize: "0.85rem" }}>
-        削除済みアカウントは復元できません。データは7年保持されます。
-      </p>
+      <div className="alert alert-info" style={{ marginTop: 0 }}>
+        <AlertTriangleIcon size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+        <div>
+          削除済みアカウントは復元できません。データは7年保持されます。
+        </div>
+      </div>
     );
   }
 
@@ -68,52 +78,51 @@ export default function AccountActions({
     const isDelete = pendingAction === "delete";
     const isSuspend = pendingAction === "suspend";
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <p style={{ fontSize: "0.9rem", lineHeight: 1.6 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+        <p className="text-sm" style={{ lineHeight: 1.6 }}>
           <strong>{accountName}</strong> を
-          {pendingAction === "suspend" && "利用停止"}
+          {isSuspend && "利用停止"}
           {pendingAction === "resume" && "再開"}
-          {pendingAction === "delete" && "削除"}
+          {isDelete && "削除"}
           しますか？
         </p>
 
         {isSuspend && (
-          <p
-            style={{
-              fontSize: "0.8rem",
-              color: "var(--text-light)",
-              lineHeight: 1.6,
-            }}
+          <ul
+            className="text-xs text-muted"
+            style={{ paddingLeft: 16, lineHeight: 1.7 }}
           >
-            • 該当ユーザーは即時ログアウト
-            <br />
-            • アプリの GPS 送信が拒否されます
-            <br />
-            • データは保持・いつでも再開可能
-          </p>
+            <li>該当ユーザーは即時ログアウト</li>
+            <li>アプリの GPS 送信が拒否されます</li>
+            <li>データは保持・いつでも再開可能</li>
+          </ul>
         )}
 
         {isDelete && (
-          <p
-            style={{
-              fontSize: "0.8rem",
-              color: "var(--danger)",
-              lineHeight: 1.6,
-            }}
+          <div
+            className="alert alert-danger"
+            style={{ padding: "var(--space-3)", margin: 0 }}
           >
-            ⚠ 復元できません
-            <br />
-            • status = deleted になりログイン不可
-            <br />
-            • データ自体は7年保持（証拠保管）
-          </p>
+            <AlertTriangleIcon size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+            <div>
+              <strong>復元できません</strong>
+              <ul
+                className="text-xs"
+                style={{ paddingLeft: 16, marginTop: 4, lineHeight: 1.7 }}
+              >
+                <li>status = deleted になりログイン不可</li>
+                <li>データ自体は7年保持（証拠保管）</li>
+              </ul>
+            </div>
+          </div>
         )}
 
         <div>
-          <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+          <label htmlFor="action-reason" className="label">
             理由{isDelete ? " *" : "（任意）"}
           </label>
           <input
+            id="action-reason"
             type="text"
             required={isDelete}
             value={reason}
@@ -121,27 +130,27 @@ export default function AccountActions({
             className="input"
             disabled={loading}
             placeholder={isDelete ? "解約申請" : "契約期間終了"}
-            style={{ marginTop: 6 }}
           />
         </div>
 
         {isDelete && (
           <div>
-            <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+            <label htmlFor="action-confirm" className="label">
               確認のため「削除」と入力 *
             </label>
             <input
+              id="action-confirm"
               type="text"
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
               className="input"
               disabled={loading}
-              style={{ marginTop: 6 }}
+              placeholder="削除"
             />
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: "var(--space-2)" }}>
           <button
             type="button"
             className="btn btn-secondary"
@@ -156,8 +165,7 @@ export default function AccountActions({
             className={isDelete ? "btn btn-danger" : "btn btn-primary"}
             onClick={submit}
             disabled={
-              loading ||
-              (isDelete && (!reason || confirmText !== "削除"))
+              loading || (isDelete && (!reason || confirmText !== "削除"))
             }
             style={{ flex: 1 }}
           >
@@ -171,20 +179,23 @@ export default function AccountActions({
           </button>
         </div>
         {error && (
-          <p style={{ color: "var(--danger)", fontSize: "0.85rem" }}>{error}</p>
+          <p className="text-sm text-danger" role="alert">
+            {error}
+          </p>
         )}
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className="action-stack">
       {status === "active" && (
         <button
           className="btn btn-secondary"
           onClick={() => setPendingAction("suspend")}
         >
-          ⚠ 利用停止
+          <PowerIcon size={14} />
+          利用停止
         </button>
       )}
       {status === "suspended" && (
@@ -192,15 +203,22 @@ export default function AccountActions({
           className="btn btn-primary"
           onClick={() => setPendingAction("resume")}
         >
-          ✓ 利用再開
+          <CheckIcon size={14} />
+          利用再開
         </button>
       )}
       <button
         className="btn btn-danger"
         onClick={() => setPendingAction("delete")}
       >
-        ❌ 削除
+        <TrashIcon size={14} />
+        削除
       </button>
+      {status === "active" && (
+        <p className="text-xs text-muted" style={{ marginTop: "var(--space-1)" }}>
+          利用停止は即時ログアウト・データは保持されます
+        </p>
+      )}
     </div>
   );
 }

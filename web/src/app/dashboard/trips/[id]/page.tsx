@@ -124,41 +124,56 @@ export default async function TripDetailPage({
         </div>
       </header>
 
+      {/* KPI ヒーロー */}
+      <section className="kpi-inline" style={{ marginBottom: "var(--space-5)" }}>
+        <div className="kpi-inline-item">
+          <p className="kpi-inline-label">出発 / 帰着</p>
+          <p
+            className="kpi-inline-value"
+            style={{ fontSize: "var(--text-base)", fontWeight: 600 }}
+          >
+            {departTime}
+            <span className="kpi-inline-value-suffix">〜</span>
+            {returnTime}
+          </p>
+        </div>
+        <div className="kpi-inline-item" title="現地での滞在時間（移動時間除く）">
+          <p className="kpi-inline-label">滞在時間</p>
+          <p className="kpi-inline-value">
+            {(trip.total_minutes / 60).toFixed(1)}
+            <span className="kpi-inline-value-suffix">h</span>
+          </p>
+        </div>
+        <div className="kpi-inline-item">
+          <p className="kpi-inline-label">最大距離</p>
+          <p className="kpi-inline-value">
+            {trip.max_distance_km != null
+              ? trip.max_distance_km.toFixed(1)
+              : "—"}
+            {trip.max_distance_km != null && (
+              <span className="kpi-inline-value-suffix">km</span>
+            )}
+          </p>
+        </div>
+      </section>
+
       {/* 基本情報 */}
       <section className="card" style={{ marginBottom: "var(--space-5)" }}>
         <h2 className="section-title">基本情報</h2>
-        <dl
-          style={{
-            display: "grid",
-            gridTemplateColumns: "120px 1fr",
-            rowGap: 12,
-            fontSize: "0.95rem",
-          }}
-        >
-          <dt style={{ color: "var(--text-light)" }}>出張先</dt>
+        <dl className="def-list">
+          <dt>出張先</dt>
           <dd>{trip.destination_label ?? "—"}</dd>
-          <dt style={{ color: "var(--text-light)" }}>訪問地</dt>
+          <dt>訪問地</dt>
           <dd>{trip.visited_areas?.join(", ") ?? "—"}</dd>
-          <dt style={{ color: "var(--text-light)" }}>出発時刻</dt>
-          <dd>{departTime}</dd>
-          <dt style={{ color: "var(--text-light)" }}>帰着時刻</dt>
-          <dd>{returnTime}</dd>
-          <dt
-            style={{ color: "var(--text-light)" }}
-            title="現地での滞在時間（移動時間除く）"
-          >
-            滞在時間
-          </dt>
-          <dd>{(trip.total_minutes / 60).toFixed(1)}h</dd>
-          <dt style={{ color: "var(--text-light)" }}>最大距離</dt>
-          <dd>
-            {trip.max_distance_km != null
-              ? `${trip.max_distance_km.toFixed(1)}km`
-              : "—"}
-          </dd>
         </dl>
 
-        <div style={{ marginTop: 20, borderTop: "1px solid #E5E7EB", paddingTop: 16 }}>
+        <div
+          style={{
+            marginTop: "var(--space-5)",
+            borderTop: "1px solid var(--border)",
+            paddingTop: "var(--space-4)",
+          }}
+        >
           <TripDetailActions
             tripId={trip.id}
             initialPurpose={trip.purpose}
@@ -204,9 +219,32 @@ export default async function TripDetailPage({
             lng: t.lng,
           }))}
         />
-        <p className="helper" style={{ marginTop: "var(--space-2)" }}>
-          勤務地（青円） / 自宅（緑円） / 200m移動（赤丸・小） / 0.5kmごとの進行方向（赤矢印） / 1kmごと（赤ピン） / 滞在ノード（赤丸・大）
-        </p>
+        <div className="map-legend" role="list" aria-label="地図凡例">
+          <span className="map-legend-item" role="listitem">
+            <span className="map-legend-swatch map-legend-swatch-circle-blue" aria-hidden="true" />
+            勤務地エリア
+          </span>
+          <span className="map-legend-item" role="listitem">
+            <span className="map-legend-swatch map-legend-swatch-circle-green" aria-hidden="true" />
+            自宅エリア
+          </span>
+          <span className="map-legend-item" role="listitem">
+            <span className="map-legend-swatch map-legend-swatch-dot-red" aria-hidden="true" />
+            200m間隔の通過点
+          </span>
+          <span className="map-legend-item" role="listitem">
+            <span className="map-legend-swatch map-legend-swatch-arrow" aria-hidden="true" />
+            0.5kmごとの進行方向
+          </span>
+          <span className="map-legend-item" role="listitem">
+            <span className="map-legend-swatch map-legend-swatch-pin-red" aria-hidden="true" />
+            1kmごとの目印
+          </span>
+          <span className="map-legend-item" role="listitem">
+            <span className="map-legend-swatch map-legend-swatch-stay" aria-hidden="true" />
+            滞在ノード
+          </span>
+        </div>
       </section>
 
       {/* 滞在ノード */}
@@ -274,48 +312,26 @@ export default async function TripDetailPage({
             <ListIcon size={18} />
             移動ログ（200m間隔・全 {tracks?.length ?? 0} 点）
           </summary>
-          <div style={{ marginTop: 16, maxHeight: 400, overflowY: "auto" }}>
+          <div style={{ marginTop: "var(--space-4)", maxHeight: 400, overflow: "auto" }}>
             {!tracks || tracks.length === 0 ? (
-              <p style={{ color: "var(--text-light)" }}>移動ログがありません</p>
+              <p className="text-light">移動ログがありません</p>
             ) : (
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  fontSize: "0.85rem",
-                }}
-              >
-                <thead style={{ background: "#F9FAFB" }}>
+              <table className="table">
+                <thead>
                   <tr>
-                    <th style={{ padding: 8, textAlign: "left" }}>時刻</th>
-                    <th style={{ padding: 8, textAlign: "right" }}>緯度</th>
-                    <th style={{ padding: 8, textAlign: "right" }}>経度</th>
-                    <th style={{ padding: 8, textAlign: "right" }}>精度(m)</th>
+                    <th>時刻</th>
+                    <th className="num">緯度</th>
+                    <th className="num">経度</th>
+                    <th className="num">精度(m)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {tracks.map((t, i) => (
-                    <tr key={i} style={{ borderTop: "1px solid #E5E7EB" }}>
-                      <td style={{ padding: 8 }}>{formatHHMMSS(t.ts)}</td>
-                      <td
-                        style={{
-                          padding: 8,
-                          textAlign: "right",
-                          fontFamily: "monospace",
-                        }}
-                      >
-                        {t.lat.toFixed(6)}
-                      </td>
-                      <td
-                        style={{
-                          padding: 8,
-                          textAlign: "right",
-                          fontFamily: "monospace",
-                        }}
-                      >
-                        {t.lng.toFixed(6)}
-                      </td>
-                      <td style={{ padding: 8, textAlign: "right" }}>
+                    <tr key={i}>
+                      <td className="tabular">{formatHHMMSS(t.ts)}</td>
+                      <td className="num font-mono">{t.lat.toFixed(6)}</td>
+                      <td className="num font-mono">{t.lng.toFixed(6)}</td>
+                      <td className="num">
                         {t.accuracy != null ? Math.round(t.accuracy) : "—"}
                       </td>
                     </tr>
