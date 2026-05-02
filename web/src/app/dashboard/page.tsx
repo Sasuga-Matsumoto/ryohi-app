@@ -91,10 +91,11 @@ export default async function DashboardPage() {
 
   // edit_source / status は migration 0007 適用済み環境のみ存在。
   // 未適用環境でもページが落ちないよう独立クエリ + try-catch で取得
-  const editMeta = new Map<
-    string,
-    { status?: string | null; edit_source?: string | null }
-  >();
+  type EditMeta = {
+    status: "auto_detected" | "manual" | null;
+    edit_source: "manual_create" | "user_edit" | null;
+  };
+  const editMeta = new Map<string, EditMeta>();
   try {
     const ids = (monthTripsCore ?? []).map((t) => t.id);
     if (ids.length > 0) {
@@ -102,14 +103,21 @@ export default async function DashboardPage() {
         .from("trips")
         .select("id, status, edit_source")
         .in("id", ids);
-      for (const e of extras ?? []) {
-        editMeta.set(
-          (e as { id: string }).id,
-          {
-            status: (e as { status?: string | null }).status,
-            edit_source: (e as { edit_source?: string | null }).edit_source,
-          },
-        );
+      for (const raw of extras ?? []) {
+        const e = raw as {
+          id: string;
+          status: string | null;
+          edit_source: string | null;
+        };
+        const status =
+          e.status === "auto_detected" || e.status === "manual"
+            ? e.status
+            : null;
+        const edit_source =
+          e.edit_source === "manual_create" || e.edit_source === "user_edit"
+            ? e.edit_source
+            : null;
+        editMeta.set(e.id, { status, edit_source });
       }
     }
   } catch {
