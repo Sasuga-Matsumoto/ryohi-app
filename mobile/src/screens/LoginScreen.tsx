@@ -11,7 +11,6 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as Linking from "expo-linking";
 import { Feather } from "@expo/vector-icons";
 import { supabase } from "../lib/supabase";
 import { colors, spacing, radius, typography, TOUCH_MIN } from "../lib/theme";
@@ -24,7 +23,10 @@ export default function LoginScreen() {
   const handleSubmit = async () => {
     if (!email) return;
     setLoading(true);
-    const redirectTo = Linking.createURL("auth/callback");
+    // Supabase URL Configuration の Redirect URLs に登録済みの URL と完全一致させる
+    // Linking.createURL は Expo SDK 版によって ryohi:/// (triple slash) を返すケースがある
+    const redirectTo = "ryohi://auth/callback";
+    console.log("[login] redirectTo =", redirectTo);
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: redirectTo },
