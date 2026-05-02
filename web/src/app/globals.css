@@ -248,12 +248,12 @@ textarea:focus-visible {
 
 .btn-soft {
   background: var(--info-bg);
-  color: var(--bright-blue);
+  color: var(--text);
   border-color: var(--light-blue);
 }
 .btn-soft:hover {
   background: var(--light-blue);
-  color: var(--dark-blue);
+  color: var(--text-strong);
   border-color: var(--bright-blue);
 }
 
