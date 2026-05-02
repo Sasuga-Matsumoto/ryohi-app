@@ -22,7 +22,7 @@ export default async function AccountDetailPage({
   const { data: account } = await supabase
     .from("accounts")
     .select(
-      "id, email, name, company_name, role, status, suspended_at, suspended_reason, created_at",
+      "id, email, name, company_name, role, status, suspended_at, suspended_reason, created_at, last_mobile_status, last_health_check_at",
     )
     .eq("id", id)
     .maybeSingle();
@@ -39,6 +39,54 @@ export default async function AccountDetailPage({
     .eq("account_id", id)
     .maybeSingle();
 
+  // 自宅・勤務地ステータス
+  const homeSet = setting?.home_lat != null;
+  const workSet = setting?.work_lat != null;
+  const placeStatus: {
+    label: string;
+    tone: "success" | "warning" | "danger";
+  } =
+    homeSet && workSet
+      ? { label: "設定済", tone: "success" }
+      : !homeSet && !workSet
+        ? { label: "自宅・勤務地未設定", tone: "danger" }
+        : !homeSet
+          ? { label: "自宅未設定", tone: "warning" }
+          : { label: "勤務地未設定", tone: "warning" };
+
+  // 位置情報ステータス（モバイル報告ベース）
+  const lastStatus = account.last_mobile_status as
+    | "services_off"
+    | "no_permission"
+    | "fg_only"
+    | "no_setting"
+    | "ready"
+    | null;
+  const permissionStatus: {
+    label: string;
+    tone: "success" | "warning" | "danger" | "muted";
+  } = !lastStatus
+    ? { label: "未報告", tone: "muted" }
+    : lastStatus === "services_off"
+      ? { label: "端末未許可", tone: "danger" }
+      : lastStatus === "no_permission" || lastStatus === "fg_only"
+        ? { label: "アプリ未許可", tone: "warning" }
+        : { label: "許可済", tone: "success" };
+
+  const toneColor = (
+    t: "success" | "warning" | "danger" | "muted",
+  ): string =>
+    ({
+      success: "var(--success)",
+      warning: "var(--warning)",
+      danger: "var(--danger)",
+      muted: "var(--text-muted)",
+    })[t];
+
+  const lastCheckLabel = account.last_health_check_at
+    ? formatRelative(account.last_health_check_at)
+    : null;
+
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
@@ -54,7 +102,6 @@ export default async function AccountDetailPage({
     .select("*", { count: "exact", head: true })
     .eq("account_id", id);
 
-  const onboarded = setting?.work_lat != null && setting?.home_lat != null;
   const createdLabel = new Date(account.created_at).toLocaleDateString("ja-JP", {
     year: "numeric",
     month: "long",
@@ -98,14 +145,39 @@ export default async function AccountDetailPage({
         style={{ marginBottom: "var(--space-6)" }}
       >
         <div className="kpi-inline-item">
-          <p className="kpi-inline-label">オンボーディング</p>
-          <p className="kpi-inline-value">
-            {onboarded ? (
-              <span style={{ color: "var(--success)" }}>完了</span>
-            ) : (
-              <span style={{ color: "var(--warning)" }}>未完了</span>
-            )}
+          <p className="kpi-inline-label">自宅・勤務地</p>
+          <p
+            className="kpi-inline-value"
+            style={{
+              fontSize: "var(--text-base)",
+              fontWeight: 700,
+              color: toneColor(placeStatus.tone),
+            }}
+          >
+            {placeStatus.label}
           </p>
+        </div>
+        <div className="kpi-inline-item">
+          <p className="kpi-inline-label">位置情報</p>
+          <p
+            className="kpi-inline-value"
+            style={{
+              fontSize: "var(--text-base)",
+              fontWeight: 700,
+              color: toneColor(permissionStatus.tone),
+            }}
+          >
+            {permissionStatus.label}
+          </p>
+          {lastCheckLabel && (
+            <p
+              className="text-xs text-muted"
+              style={{ marginTop: 2 }}
+              title={new Date(account.last_health_check_at!).toLocaleString("ja-JP")}
+            >
+              {lastCheckLabel}
+            </p>
+          )}
         </div>
         <div className="kpi-inline-item">
           <p className="kpi-inline-label">当月の出張</p>
@@ -119,15 +191,6 @@ export default async function AccountDetailPage({
           <p className="kpi-inline-value">
             {totalTripCount ?? 0}
             <span className="kpi-inline-value-suffix">件</span>
-          </p>
-        </div>
-        <div className="kpi-inline-item">
-          <p className="kpi-inline-label">利用開始</p>
-          <p
-            className="kpi-inline-value"
-            style={{ fontSize: "var(--text-base)", fontWeight: 600 }}
-          >
-            {createdLabel}
           </p>
         </div>
       </section>
@@ -222,4 +285,18 @@ export default async function AccountDetailPage({
       </div>
     </main>
   );
+}
+
+function formatRelative(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return "たった今";
+  if (min < 60) return `${min} 分前`;
+  const hour = Math.floor(min / 60);
+  if (hour < 24) return `${hour} 時間前`;
+  const day = Math.floor(hour / 24);
+  if (day < 30) return `${day} 日前`;
+  const month = Math.floor(day / 30);
+  if (month < 12) return `${month} ヶ月前`;
+  return `${Math.floor(month / 12)} 年前`;
 }
