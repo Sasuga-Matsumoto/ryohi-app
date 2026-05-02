@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,9 @@ import {
   RefreshControl,
   Alert,
   Linking,
+  Platform,
+  AppState,
+  type AppStateStatus,
 } from "react-native";
 import * as Location from "expo-location";
 import { supabase } from "../lib/supabase";
@@ -15,7 +18,6 @@ import {
   fetchMySettings,
   registerGeofence,
   registerFlushTask,
-  requestLocationPermissions,
   getCurrentLocationPermissions,
   loadLastRegisteredSetting,
   hasSettingChanged,
@@ -87,31 +89,34 @@ export default function HomeScreen({ session }: { session: any }) {
     init();
   }, [init]);
 
-  const handleSetup = async () => {
-    const perm = await requestLocationPermissions();
-    if (!perm.foreground) {
-      Alert.alert(
-        "位置情報の許可が必要",
-        "「設定アプリを開く」から位置情報を許可してください",
-        [
-          { text: "キャンセル", style: "cancel" },
-          { text: "設定を開く", onPress: () => Linking.openSettings() },
-        ],
-      );
-      return;
+  const appState = useRef(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next: AppStateStatus) => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        next === "active"
+      ) {
+        init();
+      }
+      appState.current = next;
+    });
+    return () => sub.remove();
+  }, [init]);
+
+  const handleOpenLocationSettings = async () => {
+    if (Platform.OS === "android") {
+      try {
+        await Linking.sendIntent("android.settings.LOCATION_SOURCE_SETTINGS");
+        return;
+      } catch (e) {
+        console.warn("[home] sendIntent failed, falling back", e);
+      }
     }
-    if (!perm.background) {
-      Alert.alert(
-        "「常に許可」が必要",
-        "アプリを閉じても自動記録するため、設定で「常に許可」を選んでください",
-        [
-          { text: "キャンセル", style: "cancel" },
-          { text: "設定を開く", onPress: () => Linking.openSettings() },
-        ],
-      );
-      return;
-    }
-    init();
+    await Linking.openSettings();
+  };
+
+  const handleOpenAppPermissionSettings = async () => {
+    await Linking.openSettings();
   };
 
   const handleOpenWebSettings = async () => {
@@ -128,6 +133,66 @@ export default function HomeScreen({ session }: { session: any }) {
       await Linking.openURL(`${WEB_BASE_URL}${WEB_SETTINGS_PATH}`);
     }
   };
+
+  // 警告状態に遷移したら自動でポップアップを出す（同じ状態で連続表示は抑止）
+  const popupShownForRef = useRef<Status | null>(null);
+  useEffect(() => {
+    const warnings: Status[] = [
+      "services_off",
+      "no_permission",
+      "fg_only",
+      "no_setting",
+    ];
+    if (!warnings.includes(status)) {
+      popupShownForRef.current = null;
+      return;
+    }
+    if (popupShownForRef.current === status) return;
+    popupShownForRef.current = status;
+
+    const popups: Record<
+      "services_off" | "no_permission" | "fg_only" | "no_setting",
+      { title: string; message: string; buttonText: string; onPress: () => void }
+    > = {
+      services_off: {
+        title: "端末の位置情報が OFF です",
+        message:
+          Platform.OS === "android"
+            ? "自動記録するには端末の位置情報を ON にしてください。"
+            : "設定アプリ →「プライバシーとセキュリティ」→「位置情報サービス」を ON にしてください。",
+        buttonText:
+          Platform.OS === "android" ? "位置情報設定を開く" : "設定アプリを開く",
+        onPress: handleOpenLocationSettings,
+      },
+      no_permission: {
+        title: "位置情報の許可が必要です",
+        message:
+          "設定画面を開き、「権限 → 位置情報 → 常に許可」を選んでください。",
+        buttonText: "設定画面を開く",
+        onPress: handleOpenAppPermissionSettings,
+      },
+      fg_only: {
+        title: "「常に許可」が必要です",
+        message:
+          "「使用中のみ」では出張ログを記録できません。設定画面を開き、「権限 → 位置情報 → 常に許可」を選んでください。",
+        buttonText: "設定画面を開く",
+        onPress: handleOpenAppPermissionSettings,
+      },
+      no_setting: {
+        title: "自宅・勤務地の設定が必要です",
+        message:
+          "Web の設定画面で自宅と勤務地のエリアを地図上で指定してください（半径100m）。",
+        buttonText: "Web の設定画面を開く",
+        onPress: handleOpenWebSettings,
+      },
+    };
+
+    const p = popups[status as keyof typeof popups];
+    Alert.alert(p.title, p.message, [
+      { text: "あとで", style: "cancel" },
+      { text: p.buttonText, onPress: p.onPress },
+    ]);
+  }, [status]);
 
   const handleSignOut = async () => {
     await tearDownTracking();
@@ -155,19 +220,34 @@ export default function HomeScreen({ session }: { session: any }) {
         <View style={styles.warningCard}>
           <Text style={styles.warningTitle}>端末の位置情報が OFF です</Text>
           <Text style={styles.warningBody}>
-            通知バーを下にスワイプ →「位置情報」アイコンをタップして ON にしてください。
+            {Platform.OS === "android"
+              ? "自動記録するには端末の位置情報を ON にしてください。"
+              : "設定アプリ →「プライバシーとセキュリティ」→「位置情報サービス」を ON にしてください。"}
           </Text>
+          <TouchableOpacity
+            onPress={handleOpenLocationSettings}
+            style={styles.warningButton}
+          >
+            <Text style={styles.warningButtonText}>
+              {Platform.OS === "android"
+                ? "位置情報設定を開く"
+                : "設定アプリを開く"}
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
 
       {status === "no_permission" && (
         <View style={styles.warningCard}>
-          <Text style={styles.warningTitle}>初期セットアップが必要です</Text>
+          <Text style={styles.warningTitle}>位置情報の許可が必要です</Text>
           <Text style={styles.warningBody}>
-            位置情報の許可をしてください。「常に許可」を選ぶと、アプリを閉じている時も自動記録されます。
+            下のボタンから設定画面を開き、「権限 → 位置情報 → 常に許可」を選んでください。
           </Text>
-          <TouchableOpacity onPress={handleSetup} style={styles.warningButton}>
-            <Text style={styles.warningButtonText}>セットアップ開始</Text>
+          <TouchableOpacity
+            onPress={() => Linking.openSettings()}
+            style={styles.warningButton}
+          >
+            <Text style={styles.warningButtonText}>設定画面を開く</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -176,13 +256,13 @@ export default function HomeScreen({ session }: { session: any }) {
         <View style={styles.warningCard}>
           <Text style={styles.warningTitle}>「常に許可」が必要です</Text>
           <Text style={styles.warningBody}>
-            「使用中のみ」では出張ログを記録できません。設定アプリで「常に許可」を選んでください。
+            「使用中のみ」では出張ログを記録できません。下のボタンから設定画面を開き、「権限 → 位置情報 → 常に許可」を選んでください。
           </Text>
           <TouchableOpacity
             onPress={() => Linking.openSettings()}
             style={styles.warningButton}
           >
-            <Text style={styles.warningButtonText}>設定アプリを開く</Text>
+            <Text style={styles.warningButtonText}>設定画面を開く</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -191,7 +271,7 @@ export default function HomeScreen({ session }: { session: any }) {
         <View style={styles.warningCard}>
           <Text style={styles.warningTitle}>自宅・勤務地の設定が必要です</Text>
           <Text style={styles.warningBody}>
-            Web の設定画面で自宅と勤務地のエリアを地図上で指定してください（半径100m）。設定後、このアプリに戻って画面を下に引いて更新すると反映されます。
+            Web の設定画面で自宅と勤務地のエリアを地図上で指定してください（半径100m）。設定後、このアプリに戻ると自動で反映されます。
           </Text>
           <TouchableOpacity
             onPress={handleOpenWebSettings}
