@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 import { Feather } from "@expo/vector-icons";
-import { colors, radius, spacing, typography, TOUCH_MIN } from "../lib/theme";
+import { colors, radius, spacing, typography, TOUCH_MIN, fonts } from "../lib/theme";
 import { geocodeSearch, type GeocodeResult } from "../lib/health";
 
 export type LatLng = { lat: number; lng: number };
@@ -279,6 +279,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: colors.text,
+    fontFamily: fonts.regular,
     fontSize: 14,
     paddingVertical: 0,
   },

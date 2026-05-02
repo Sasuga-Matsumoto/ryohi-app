@@ -64,20 +64,31 @@ export const radius = {
   pill: 999,
 } as const;
 
+/**
+ * Noto Sans JP のウェイト別ファミリー名。
+ * @expo-google-fonts/noto-sans-jp が提供するキー名と一致させる。
+ */
+export const fonts = {
+  regular: "NotoSansJP_400Regular",
+  medium: "NotoSansJP_500Medium",
+  semibold: "NotoSansJP_600SemiBold",
+  bold: "NotoSansJP_700Bold",
+} as const;
+
 export const typography = {
-  display: { fontSize: 28, fontWeight: "700" as const, letterSpacing: -0.4, lineHeight: 34 },
-  title: { fontSize: 20, fontWeight: "700" as const, letterSpacing: -0.2, lineHeight: 26 },
-  subtitle: { fontSize: 16, fontWeight: "600" as const, lineHeight: 22 },
-  body: { fontSize: 14, fontWeight: "400" as const, lineHeight: 20 },
-  bodyStrong: { fontSize: 14, fontWeight: "600" as const, lineHeight: 20 },
-  caption: { fontSize: 12, fontWeight: "400" as const, lineHeight: 16 },
-  captionStrong: { fontSize: 12, fontWeight: "600" as const, lineHeight: 16 },
+  display: { fontFamily: fonts.bold, fontSize: 28, letterSpacing: -0.4, lineHeight: 34 },
+  title: { fontFamily: fonts.bold, fontSize: 20, letterSpacing: -0.2, lineHeight: 26 },
+  subtitle: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 22 },
+  body: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
+  bodyStrong: { fontFamily: fonts.semibold, fontSize: 14, lineHeight: 20 },
+  caption: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16 },
+  captionStrong: { fontFamily: fonts.semibold, fontSize: 12, lineHeight: 16 },
   // numbers / KPI
-  kpi: { fontSize: 32, fontWeight: "700" as const, letterSpacing: -0.5, lineHeight: 36 },
+  kpi: { fontFamily: fonts.bold, fontSize: 32, letterSpacing: -0.5, lineHeight: 36 },
   // section labels (uppercase)
   overline: {
+    fontFamily: fonts.semibold,
     fontSize: 11,
-    fontWeight: "600" as const,
     letterSpacing: 0.6,
     textTransform: "uppercase" as const,
     lineHeight: 14,

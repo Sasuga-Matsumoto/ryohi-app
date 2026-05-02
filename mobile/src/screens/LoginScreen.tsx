@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { supabase } from "../lib/supabase";
-import { colors, spacing, radius, typography, TOUCH_MIN } from "../lib/theme";
+import { colors, spacing, radius, typography, TOUCH_MIN, fonts } from "../lib/theme";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -176,6 +176,7 @@ const styles = StyleSheet.create({
     borderColor: colors.borderStrong,
     borderRadius: radius.md,
     paddingHorizontal: spacing[3],
+    fontFamily: fonts.regular,
     fontSize: 16,
     color: colors.text,
     backgroundColor: colors.surface,
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.4 },
   buttonText: {
     color: colors.white,
-    fontWeight: "600",
+    fontFamily: fonts.semibold,
     fontSize: 15,
   },
   note: {
@@ -228,7 +229,7 @@ const styles = StyleSheet.create({
   },
   sentEmailHighlight: {
     color: colors.text,
-    fontWeight: "600",
+    fontFamily: fonts.semibold,
   },
   linkButton: {
     flexDirection: "row",
@@ -243,6 +244,6 @@ const styles = StyleSheet.create({
   linkText: {
     color: colors.primary,
     fontSize: 14,
-    fontWeight: "600",
+    fontFamily: fonts.semibold,
   },
 });

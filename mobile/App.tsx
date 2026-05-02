@@ -1,9 +1,17 @@
 import "react-native-url-polyfill/auto";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, View, Text, ActivityIndicator } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Linking from "expo-linking";
+import * as SplashScreen from "expo-splash-screen";
+import {
+  useFonts,
+  NotoSansJP_400Regular,
+  NotoSansJP_500Medium,
+  NotoSansJP_600SemiBold,
+  NotoSansJP_700Bold,
+} from "@expo-google-fonts/noto-sans-jp";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./src/lib/supabase";
 import { defineTasks } from "./src/lib/tasks";
@@ -12,6 +20,9 @@ import LoginScreen from "./src/screens/LoginScreen";
 import HomeScreen from "./src/screens/HomeScreen";
 
 defineTasks();
+
+// フォントが読み込まれるまでスプラッシュを保持
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function parseTokensFromUrl(url: string): { access_token?: string; refresh_token?: string } {
   const result: { access_token?: string; refresh_token?: string } = {};
@@ -34,6 +45,13 @@ async function handleDeepLink(url: string) {
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [fontsLoaded] = useFonts({
+    NotoSansJP_400Regular,
+    NotoSansJP_500Medium,
+    NotoSansJP_600SemiBold,
+    NotoSansJP_700Bold,
+  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -59,12 +77,22 @@ export default function App() {
     };
   }, []);
 
-  if (loading) {
+  const onLayoutReady = useCallback(async () => {
+    if (fontsLoaded) {
+      await SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded || loading) {
     return (
       <SafeAreaProvider>
-        <View style={styles.loading}>
-          <Text style={styles.loadingBrand}>Log</Text>
-          <Text style={styles.loadingTagline}>Tracker</Text>
+        <View style={styles.loading} onLayout={onLayoutReady}>
+          {fontsLoaded && (
+            <>
+              <Text style={styles.loadingBrand}>Log</Text>
+              <Text style={styles.loadingTagline}>Tracker</Text>
+            </>
+          )}
           <ActivityIndicator
             size="small"
             color={colors.primary}
@@ -78,8 +106,10 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      {session ? <HomeScreen session={session} /> : <LoginScreen />}
-      <StatusBar style="auto" />
+      <View style={{ flex: 1 }} onLayout={onLayoutReady}>
+        {session ? <HomeScreen session={session} /> : <LoginScreen />}
+        <StatusBar style="auto" />
+      </View>
     </SafeAreaProvider>
   );
 }

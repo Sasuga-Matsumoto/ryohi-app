@@ -35,6 +35,7 @@ import {
   radius,
   typography,
   TOUCH_MIN,
+  fonts,
 } from "../lib/theme";
 
 export default function SettingsScreen({ onClose }: { onClose: () => void }) {
@@ -625,7 +626,7 @@ function PurposeDropdown({
                           styles.dropdownOptionText,
                           selected && {
                             color: colors.primary,
-                            fontWeight: "700",
+                            fontFamily: fonts.bold,
                           },
                         ]}
                       >
@@ -755,7 +756,7 @@ function PresetEditor({
               <Text
                 style={[
                   styles.presetChipText,
-                  isCustom && { color: colors.primary, fontWeight: "600" },
+                  isCustom && { color: colors.primary, fontFamily: fonts.semibold },
                 ]}
               >
                 {p}
@@ -822,12 +823,12 @@ const styles = StyleSheet.create({
   },
   sectionStepText: {
     color: colors.white,
-    fontWeight: "700",
+    fontFamily: fonts.bold,
     fontSize: 12,
   },
   sectionTitle: {
     fontSize: 15,
-    fontWeight: "600",
+    fontFamily: fonts.semibold,
     color: colors.text,
     letterSpacing: 0,
   },
@@ -861,6 +862,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.surface,
     color: colors.text,
+    fontFamily: fonts.regular,
     fontSize: 14,
   },
 

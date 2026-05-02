@@ -40,7 +40,7 @@ import LocationPickerMap, {
 import SettingsScreen from "./SettingsScreen";
 import { getTodayStats, type TodayStats } from "../lib/todayStats";
 import RouteMap from "../components/RouteMap";
-import { colors, spacing, radius, typography, shadows, TOUCH_MIN } from "../lib/theme";
+import { colors, spacing, radius, typography, shadows, TOUCH_MIN, fonts } from "../lib/theme";
 
 const WEB_BASE_URL = "https://ryohi-app.vercel.app";
 const WEB_DASHBOARD_PATH = "/dashboard";
@@ -1014,7 +1014,7 @@ const styles = StyleSheet.create({
   onbCounterTotal: {
     ...typography.body,
     color: colors.textMuted,
-    fontWeight: "500",
+    fontFamily: fonts.medium,
   },
   onbBarTrack: {
     height: 5,

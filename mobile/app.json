@@ -90,7 +90,8 @@
         {
           "minimumInterval": 3600
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "eas": {

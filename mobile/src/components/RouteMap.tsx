@@ -6,7 +6,7 @@
  */
 import { View, StyleSheet, Text } from "react-native";
 import { WebView } from "react-native-webview";
-import { colors, radius } from "../lib/theme";
+import { colors, radius, fonts } from "../lib/theme";
 
 type LatLng = { lat: number; lng: number };
 
@@ -234,9 +234,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textMuted,
     textAlign: "center",
-    fontWeight: "600",
+    fontFamily: fonts.semibold,
   },
   emptyHint: {
+    fontFamily: fonts.regular,
     fontSize: 11,
     color: colors.textDisabled,
     textAlign: "center",

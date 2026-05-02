@@ -3,9 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import LocationPicker from "@/components/LocationPicker";
-import PurposeInput, {
-  DEFAULT_PURPOSE_PRESETS,
-} from "@/components/PurposeInput";
+import { DEFAULT_PURPOSE_PRESETS } from "@/components/PurposeInput";
 import {
   HomeIcon,
   BuildingIcon,
@@ -441,14 +439,37 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
             <label htmlFor="default_purpose" className="label">
               デフォルト目的
             </label>
-            <PurposeInput
+            <select
               id="default_purpose"
+              className="input"
               value={s.default_purpose}
-              onChange={(v) => update("default_purpose", v)}
-              customPresets={s.purpose_presets}
-              placeholder="顧客訪問"
+              onChange={(e) => update("default_purpose", e.target.value)}
               aria-label="デフォルト目的"
-            />
+            >
+              {(() => {
+                const seen = new Set<string>();
+                const options: string[] = [];
+                for (const p of [
+                  ...DEFAULT_PURPOSE_PRESETS,
+                  ...s.purpose_presets,
+                ]) {
+                  const t = p.trim();
+                  if (!t || seen.has(t)) continue;
+                  seen.add(t);
+                  options.push(t);
+                }
+                // 現在値が候補に無い場合（過去に自由入力で保存された値）も
+                // 一旦は表示してユーザーが選び直せるようにする
+                if (s.default_purpose && !seen.has(s.default_purpose)) {
+                  options.unshift(s.default_purpose);
+                }
+                return options.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ));
+              })()}
+            </select>
 
             <div style={{ marginTop: "var(--space-5)" }}>
               <p
