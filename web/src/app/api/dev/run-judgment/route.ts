@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
     trip_definition_type: settingRow.trip_definition_type,
     trip_threshold_hours: settingRow.trip_threshold_hours,
     trip_threshold_km: settingRow.trip_threshold_km,
+    business_hours_enabled: settingRow.business_hours_enabled ?? false,
     business_hours_start: String(settingRow.business_hours_start).slice(0, 5),
     business_hours_end: String(settingRow.business_hours_end).slice(0, 5),
     include_holidays: settingRow.include_holidays,

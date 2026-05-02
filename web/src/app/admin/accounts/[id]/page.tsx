@@ -29,7 +29,7 @@ export default async function AccountDetailPage({
   const { data: setting } = await supabase
     .from("account_settings")
     .select(
-      "trip_definition_type, trip_threshold_hours, trip_threshold_km, business_hours_start, business_hours_end, include_holidays, include_weekends, work_lat, home_lat"
+      "trip_definition_type, trip_threshold_hours, trip_threshold_km, business_hours_enabled, business_hours_start, business_hours_end, include_holidays, include_weekends, work_lat, home_lat"
     )
     .eq("account_id", id)
     .maybeSingle();
@@ -158,7 +158,9 @@ export default async function AccountDetailPage({
                   </dd>
                   <dt style={{ color: "var(--text-light)" }}>業務時間</dt>
                   <dd>
-                    {setting.business_hours_start} - {setting.business_hours_end}
+                    {setting.business_hours_enabled
+                      ? `${setting.business_hours_start} - ${setting.business_hours_end}`
+                      : "設定なし（24時間）"}
                   </dd>
                   <dt style={{ color: "var(--text-light)" }}>休日</dt>
                   <dd>

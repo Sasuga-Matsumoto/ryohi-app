@@ -29,6 +29,7 @@ export async function PUT(request: NextRequest) {
     "trip_definition_type",
     "trip_threshold_hours",
     "trip_threshold_km",
+    "business_hours_enabled",
     "business_hours_start",
     "business_hours_end",
     "include_holidays",

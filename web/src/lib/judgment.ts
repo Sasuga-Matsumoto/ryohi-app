@@ -198,8 +198,13 @@ function buildOutSets(
     if (c.area === "OUT") {
       // 通勤区間に含まれる場合は除外
       if (isCommuteIdx(i, commute)) continue;
-      // 業務時間と少しでも重なるか判定（重ならなければ完全業務時間外なので除外）
-      if (overlapMinutesWithBusinessHours(c, setting) <= 0) continue;
+      // 業務時間が設定されている場合のみ、業務時間と重ならない OUT を除外
+      if (
+        setting.business_hours_enabled &&
+        overlapMinutesWithBusinessHours(c, setting) <= 0
+      ) {
+        continue;
+      }
       current.push(c);
     }
     // HOME は OUT セットを切らない

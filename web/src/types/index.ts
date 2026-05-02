@@ -40,12 +40,13 @@ export interface AccountSetting {
   trip_threshold_km: number; // default 30
 
   // 業務時間
-  business_hours_start: string; // 'HH:MM' default '09:00'
-  business_hours_end: string; // 'HH:MM' default '18:00'
+  business_hours_enabled: boolean; // default false（false = 24時間扱い）
+  business_hours_start: string; // 'HH:MM' default '09:00'（enabled=false時は無視）
+  business_hours_end: string; // 'HH:MM' default '18:00'（enabled=false時は無視）
 
   // 休日設定
-  include_holidays: boolean; // default false
-  include_weekends: boolean; // default false
+  include_holidays: boolean; // default true
+  include_weekends: boolean; // default true
 
   // 目的のデフォルト値
   default_purpose: string; // default '客先訪問'

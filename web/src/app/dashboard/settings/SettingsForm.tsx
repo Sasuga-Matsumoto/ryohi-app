@@ -23,6 +23,7 @@ type Setting = {
   trip_definition_type: "hours" | "km";
   trip_threshold_hours: number;
   trip_threshold_km: number;
+  business_hours_enabled: boolean;
   business_hours_start: string;
   business_hours_end: string;
   include_holidays: boolean;
@@ -40,10 +41,11 @@ const DEFAULTS: Setting = {
   trip_definition_type: "hours",
   trip_threshold_hours: 4,
   trip_threshold_km: 30,
+  business_hours_enabled: false,
   business_hours_start: "09:00",
   business_hours_end: "18:00",
-  include_holidays: false,
-  include_weekends: false,
+  include_holidays: true,
+  include_weekends: true,
   default_purpose: "客先訪問",
 };
 
@@ -200,24 +202,36 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
           <ClockIcon size={18} /> 業務時間
         </h2>
         <p className="helper" style={{ marginBottom: "var(--space-3)" }}>
-          この時間帯外の外出は出張に含めません
+          設定すると、その時間帯外の外出は出張に含めません。設定しない場合は24時間すべてが対象になります。
         </p>
-        <div className="row">
-          <input
-            type="time"
-            value={s.business_hours_start}
-            onChange={(e) => update("business_hours_start", e.target.value)}
-            className="input"
-            style={{ width: 140 }}
-          />
-          <span className="text-muted">〜</span>
-          <input
-            type="time"
-            value={s.business_hours_end}
-            onChange={(e) => update("business_hours_end", e.target.value)}
-            className="input"
-            style={{ width: 140 }}
-          />
+        <div className="stack-sm">
+          <label className="row" style={{ gap: "var(--space-2)", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={s.business_hours_enabled}
+              onChange={(e) => update("business_hours_enabled", e.target.checked)}
+            />
+            <span>業務時間を設定する</span>
+          </label>
+          {s.business_hours_enabled && (
+            <div className="row" style={{ paddingLeft: "var(--space-5)" }}>
+              <input
+                type="time"
+                value={s.business_hours_start}
+                onChange={(e) => update("business_hours_start", e.target.value)}
+                className="input"
+                style={{ width: 140 }}
+              />
+              <span className="text-muted">〜</span>
+              <input
+                type="time"
+                value={s.business_hours_end}
+                onChange={(e) => update("business_hours_end", e.target.value)}
+                className="input"
+                style={{ width: 140 }}
+              />
+            </div>
+          )}
         </div>
       </section>
 
@@ -227,7 +241,7 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
           <CalendarIcon size={18} /> 休日設定
         </h2>
         <p className="helper" style={{ marginBottom: "var(--space-3)" }}>
-          OFFのまま運用すると、休日の出張は自動で除外されます（後から復元可能）
+          OFFにすると、その日の出張は自動で除外されます（後から復元可能）
         </p>
         <div className="stack-sm">
           <label className="row" style={{ gap: "var(--space-2)", cursor: "pointer" }}>

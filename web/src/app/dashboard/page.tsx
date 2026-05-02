@@ -47,7 +47,7 @@ export default async function DashboardPage() {
   const { data: setting } = await supabase
     .from("account_settings")
     .select(
-      "work_lat, home_lat, trip_definition_type, trip_threshold_hours, trip_threshold_km, business_hours_start, business_hours_end"
+      "work_lat, home_lat, trip_definition_type, trip_threshold_hours, trip_threshold_km, business_hours_enabled, business_hours_start, business_hours_end"
     )
     .eq("account_id", user.id)
     .maybeSingle();
@@ -157,8 +157,9 @@ export default async function DashboardPage() {
             <span>
               業務時間:{" "}
               <strong className="text-strong">
-                {String(setting.business_hours_start).slice(0, 5)} -{" "}
-                {String(setting.business_hours_end).slice(0, 5)}
+                {setting.business_hours_enabled
+                  ? `${String(setting.business_hours_start).slice(0, 5)} - ${String(setting.business_hours_end).slice(0, 5)}`
+                  : "設定なし（24時間）"}
               </strong>
             </span>
           </div>

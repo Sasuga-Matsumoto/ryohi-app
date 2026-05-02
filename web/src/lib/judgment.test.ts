@@ -35,6 +35,7 @@ const baseSetting: AccountSetting = {
   trip_definition_type: "hours",
   trip_threshold_hours: 4,
   trip_threshold_km: 30,
+  business_hours_enabled: true,
   business_hours_start: "09:00",
   business_hours_end: "18:00",
   include_holidays: false,
@@ -242,6 +243,39 @@ describe("休日テスト（記録するが auto-excluded）", () => {
     expect(result.trip).not.toBeNull();
     expect(result.autoExcluded).toBe(false);
     expect(result.trip?.is_excluded).toBe(false);
+  });
+});
+
+describe("業務時間設定なし（business_hours_enabled=false）", () => {
+  it("業務時間外の OUT 滞在も対象になる（深夜23:00-翌5:00ではなく日中の話）", () => {
+    const date = "2026-04-13";
+    const setting = { ...baseSetting, business_hours_enabled: false };
+    const stays = [
+      makeStay(date, "09:00", "18:00", WORK.lat, WORK.lng),
+      // 19:00以降の OUT 滞在 5h（業務時間内なら除外されるが、enabled=false なら対象）
+      makeStay(date, "19:00", "23:59", SHIBUYA.lat, SHIBUYA.lng),
+    ];
+
+    const result = judgeTrip({ date, stays, setting });
+    expect(result.trip).not.toBeNull();
+    expect(result.trip?.depart_ts).toBe(ts(date, "18:00"));
+    // OUT 滞在 19:00-23:59 = 4h59m = 299分
+    expect(result.trip?.total_minutes).toBe(299);
+  });
+
+  it("業務時間と重なりゼロの OUT も対象（5:00-9:00の4h、WORK挟み）", () => {
+    const date = "2026-04-13";
+    const setting = { ...baseSetting, business_hours_enabled: false };
+    const stays = [
+      makeStay(date, "02:00", "04:00", WORK.lat, WORK.lng),
+      // 5:00-9:00 の OUT 4h（業務時間 9-18 と重なり 0min → enabled=true なら除外）
+      makeStay(date, "05:00", "09:00", SHIBUYA.lat, SHIBUYA.lng),
+      makeStay(date, "10:00", "12:00", WORK.lat, WORK.lng),
+    ];
+
+    const result = judgeTrip({ date, stays, setting });
+    expect(result.trip).not.toBeNull();
+    expect(result.trip?.total_minutes).toBe(240); // 4h
   });
 });
 
