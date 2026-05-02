@@ -218,7 +218,7 @@ export default async function DashboardPage() {
           </div>
           <a
             href="/dashboard/settings"
-            className="btn btn-secondary btn-sm"
+            className="btn btn-soft btn-sm"
           >
             <SettingsIcon size={14} />
             設定を変更
@@ -243,7 +243,7 @@ export default async function DashboardPage() {
               </span>
               <a
                 href="/dashboard/trips/new"
-                className="btn btn-secondary btn-sm"
+                className="btn btn-soft btn-sm"
               >
                 <PlusIcon size={12} />
                 手動追加

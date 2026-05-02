@@ -246,6 +246,17 @@ textarea:focus-visible {
 }
 .btn-secondary:hover { background: var(--surface-hover); color: var(--text); }
 
+.btn-soft {
+  background: var(--info-bg);
+  color: var(--bright-blue);
+  border-color: var(--light-blue);
+}
+.btn-soft:hover {
+  background: var(--light-blue);
+  color: var(--dark-blue);
+  border-color: var(--bright-blue);
+}
+
 .btn-ghost { background: transparent; color: var(--text); }
 .btn-ghost:hover { background: var(--surface-hover); }
 

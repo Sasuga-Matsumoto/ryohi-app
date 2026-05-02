@@ -50,7 +50,7 @@ export default function OnboardingChecklist({
       detail: !homeSet && (
         <a
           href="/dashboard/settings#sec-home"
-          className="btn btn-secondary btn-sm"
+          className="btn btn-soft btn-sm"
         >
           設定する
           <ChevronRightIcon size={12} />
@@ -65,7 +65,7 @@ export default function OnboardingChecklist({
       detail: !workSet && (
         <a
           href="/dashboard/settings#sec-work"
-          className="btn btn-secondary btn-sm"
+          className="btn btn-soft btn-sm"
         >
           設定する
           <ChevronRightIcon size={12} />
@@ -81,7 +81,7 @@ export default function OnboardingChecklist({
         <button
           type="button"
           onClick={() => setShowQr((v) => !v)}
-          className="btn btn-secondary btn-sm"
+          className="btn btn-soft btn-sm"
         >
           {showQr ? "QR を閉じる" : "QR コードを表示"}
           <ChevronRightIcon size={12} />
@@ -96,7 +96,7 @@ export default function OnboardingChecklist({
       detail: !permissionGranted && (
         <a
           href="/help/install"
-          className="btn btn-secondary btn-sm"
+          className="btn btn-soft btn-sm"
         >
           手順を見る
           <ChevronRightIcon size={12} />
