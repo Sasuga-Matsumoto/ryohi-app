@@ -166,7 +166,7 @@ export default async function DashboardPage() {
           </div>
           <a
             href="/dashboard/settings"
-            className="btn btn-ghost btn-sm"
+            className="btn btn-secondary btn-sm"
           >
             <SettingsIcon size={14} />
             設定を変更
