@@ -479,56 +479,68 @@ export default function HomeScreen({ session }: { session: any }) {
             onPress={handleResumeRecording}
           />
         )}
-        {status === "no_setting" && (
-          <View style={styles.warningCard}>
-            <View style={styles.warningHead}>
-              <Feather
-                name="alert-triangle"
-                color={colors.warningText}
-                size={18}
-              />
-              <Text style={styles.warningTitle}>
-                自宅・勤務地の設定が必要です
+        {status === "no_setting" && (() => {
+          const homeMissing = setting?.home_lat == null;
+          const workMissing = setting?.work_lat == null;
+          const bothMissing = homeMissing && workMissing;
+          const title = bothMissing
+            ? "自宅・勤務地の設定が必要です"
+            : homeMissing
+              ? "自宅エリアの設定が必要です"
+              : "勤務地エリアの設定が必要です";
+          return (
+            <View style={styles.warningCard}>
+              <View style={styles.warningHead}>
+                <Feather
+                  name="alert-triangle"
+                  color={colors.warningText}
+                  size={18}
+                />
+                <Text style={styles.warningTitle}>{title}</Text>
+              </View>
+              <Text style={styles.warningBody}>
+                地図でエリア（半径100m）を指定してください。Web 設定画面でも同じことができます。
               </Text>
-            </View>
-            <Text style={styles.warningBody}>
-              地図でエリア（半径100m）を指定してください。Web 設定画面でも同じことができます。
-            </Text>
-            <TouchableOpacity
-              onPress={() => openPicker("home")}
-              style={[styles.warningButton, { marginBottom: spacing[2] }]}
-              activeOpacity={0.85}
-            >
-              <Feather name="home" color={colors.white} size={16} />
-              <Text style={styles.warningButtonText}>自宅エリアを設定</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => openPicker("work")}
-              style={[styles.warningButton, { marginBottom: spacing[2] }]}
-              activeOpacity={0.85}
-            >
-              <Feather name="briefcase" color={colors.white} size={16} />
-              <Text style={styles.warningButtonText}>勤務地エリアを設定</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleOpenWebDashboard}
-              style={[
-                styles.warningButton,
-                { backgroundColor: "transparent" },
-              ]}
-              activeOpacity={0.85}
-            >
-              <Text
+              {homeMissing && (
+                <TouchableOpacity
+                  onPress={() => openPicker("home")}
+                  style={[styles.warningButton, { marginBottom: spacing[2] }]}
+                  activeOpacity={0.85}
+                >
+                  <Feather name="home" color={colors.white} size={16} />
+                  <Text style={styles.warningButtonText}>自宅エリアを設定</Text>
+                </TouchableOpacity>
+              )}
+              {workMissing && (
+                <TouchableOpacity
+                  onPress={() => openPicker("work")}
+                  style={[styles.warningButton, { marginBottom: spacing[2] }]}
+                  activeOpacity={0.85}
+                >
+                  <Feather name="briefcase" color={colors.white} size={16} />
+                  <Text style={styles.warningButtonText}>勤務地エリアを設定</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                onPress={handleOpenWebDashboard}
                 style={[
-                  styles.warningButtonText,
-                  { color: colors.warningText },
+                  styles.warningButton,
+                  { backgroundColor: "transparent" },
                 ]}
+                activeOpacity={0.85}
               >
-                Web でダッシュボードを開く
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+                <Text
+                  style={[
+                    styles.warningButtonText,
+                    { color: colors.warningText },
+                  ]}
+                >
+                  Web でダッシュボードを開く
+                </Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })()}
 
         {/* オンボーディングチェックリスト（未完了時のみ）*/}
         {status === "ready" && (
