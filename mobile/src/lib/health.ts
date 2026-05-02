@@ -149,18 +149,24 @@ export async function reverseGeocode(
   }
 }
 
+export interface FormattedAddress {
+  postcode: string | null;
+  /** 都道府県 + 市区町村 + 町名 + 番地 を半角スペース区切りで結合 */
+  line: string | null;
+}
+
 /**
- * Nominatim の address フィールドから日本住所を組み立てる。
- * 例: 東京都港区赤坂7-1-1 / 神奈川県横浜市西区南幸2-15-13
- *
- * Nominatim の日本逆ジオコーディングは英語キー(state/city/suburb等)で
- * 都道府県・市区町村・町名・番地を返す。
+ * Nominatim の address フィールドから日本住所を構造化する。
+ * 例:
+ *   { postcode: "110-0007", line: "東京都 台東区 上野公園 12-8" }
  */
 export function formatJapaneseAddress(
   addr: Record<string, string> | null | undefined,
   fallback?: string | null,
-): string | null {
-  if (!addr) return fallback ?? null;
+): FormattedAddress {
+  if (!addr) return { postcode: null, line: fallback ?? null };
+
+  const postcode = addr.postcode ?? null;
   const prefecture = addr.province ?? addr.state ?? "";
   const city =
     addr.city ?? addr.town ?? addr.county ?? addr.municipality ?? "";
@@ -171,13 +177,14 @@ export function formatJapaneseAddress(
     addr.quarter ??
     addr.hamlet ??
     "";
-  const block = addr.block ?? "";
+  const block = addr.block ?? addr.amenity ?? "";
   const houseNumber = addr.house_number ?? "";
 
   const parts = [prefecture, city, ward, suburb, block, houseNumber]
-    .filter((p) => p && p.trim().length > 0);
-  if (parts.length === 0) return fallback ?? null;
-  // 同じ要素の重複を削除（city と ward が同じ場合など）
+    .map((p) => (p ?? "").trim())
+    .filter((p) => p.length > 0);
+
+  // 同じ要素の重複を削除（city と ward が同じ値で返るケースなど）
   const seen = new Set<string>();
   const dedup: string[] = [];
   for (const p of parts) {
@@ -185,7 +192,8 @@ export function formatJapaneseAddress(
     seen.add(p);
     dedup.push(p);
   }
-  return dedup.join("");
+  const line = dedup.length > 0 ? dedup.join(" ") : fallback ?? null;
+  return { postcode, line };
 }
 
 /**

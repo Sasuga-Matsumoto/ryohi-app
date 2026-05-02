@@ -29,7 +29,11 @@ import {
   type FullSetting,
 } from "../lib/settings";
 import LocationPickerMap, { type LatLng } from "../components/LocationPickerMap";
-import { reverseGeocode, formatJapaneseAddress } from "../lib/health";
+import {
+  reverseGeocode,
+  formatJapaneseAddress,
+  type FormattedAddress,
+} from "../lib/health";
 import {
   colors,
   spacing,
@@ -376,7 +380,7 @@ function PlaceCard({
   onEdit: () => void;
 }) {
   const isSet = lat != null && lng != null;
-  const [address, setAddress] = useState<string | null>(null);
+  const [address, setAddress] = useState<FormattedAddress | null>(null);
   const [resolving, setResolving] = useState(false);
 
   useEffect(() => {
@@ -400,6 +404,8 @@ function PlaceCard({
     // 緯度経度が変わったときだけ再解決
   }, [isSet, lat, lng]);
 
+  const hasAddress = isSet && address && (address.postcode || address.line);
+
   return (
     <TouchableOpacity onPress={onEdit} style={styles.card} activeOpacity={0.7}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -407,10 +413,25 @@ function PlaceCard({
         <View style={{ flex: 1 }}>
           <Text style={styles.cardTitle}>{label}</Text>
           {isSet ? (
-            address ? (
-              <Text style={styles.placeAddress} numberOfLines={2}>
-                {address}
-              </Text>
+            hasAddress ? (
+              <View style={{ gap: 2, marginTop: 2 }}>
+                {address!.postcode && (
+                  <View style={styles.placeRow}>
+                    <Text style={styles.placeKey}>郵便番号</Text>
+                    <Text style={styles.placeAddress}>
+                      {address!.postcode}
+                    </Text>
+                  </View>
+                )}
+                {address!.line && (
+                  <View style={styles.placeRow}>
+                    <Text style={styles.placeKey}>住所</Text>
+                    <Text style={styles.placeAddress} numberOfLines={2}>
+                      {address!.line}
+                    </Text>
+                  </View>
+                )}
+              </View>
             ) : resolving ? (
               <Text style={styles.placeMono}>住所を取得中…</Text>
             ) : (
@@ -910,9 +931,19 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   placeAddress: {
-    ...typography.body,
-    color: colors.textLight,
-    marginTop: 2,
+    ...typography.caption,
+    color: colors.text,
+    flex: 1,
+  },
+  placeRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "flex-start",
+  },
+  placeKey: {
+    ...typography.caption,
+    color: colors.textMuted,
+    width: 56,
   },
   placeEmpty: {
     ...typography.caption,

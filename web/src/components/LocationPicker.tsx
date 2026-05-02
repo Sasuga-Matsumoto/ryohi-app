@@ -2,6 +2,11 @@
 
 import dynamic from "next/dynamic";
 import { useState, useEffect, useRef } from "react";
+import {
+  formatJapaneseAddressDetailed,
+  type FormattedAddress,
+  type NominatimAddress,
+} from "@/lib/address-format";
 
 // react-leaflet は window 依存なので SSR 無効
 const MapView = dynamic(() => import("./MapView"), {
@@ -47,7 +52,7 @@ export default function LocationPicker({
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
-  const [resolvedAddress, setResolvedAddress] = useState<string | null>(null);
+  const [resolvedAddress, setResolvedAddress] = useState<FormattedAddress | null>(null);
   const [acquiringLocation, setAcquiringLocation] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -63,9 +68,17 @@ export default function LocationPicker({
     let aborted = false;
     fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`)
       .then((r) => r.json())
-      .then((data: { display_name?: string }) => {
-        if (!aborted) setResolvedAddress(data.display_name ?? null);
-      })
+      .then(
+        (data: {
+          display_name?: string | null;
+          address?: NominatimAddress | null;
+        }) => {
+          if (aborted) return;
+          setResolvedAddress(
+            formatJapaneseAddressDetailed(data.address, data.display_name),
+          );
+        },
+      )
       .catch(() => {});
     return () => {
       aborted = true;
@@ -340,20 +353,33 @@ export default function LocationPicker({
             background: "#F0F9FF",
             borderRadius: 8,
             fontSize: "0.85rem",
-            lineHeight: 1.6,
+            lineHeight: 1.7,
           }}
         >
-          <div>
-            <strong>選択中:</strong>{" "}
-            <span style={{ fontFamily: "monospace" }}>
+          {resolvedAddress?.postcode && (
+            <div style={{ display: "flex", gap: 8 }}>
+              <span style={{ color: "var(--text-light)", minWidth: "5em" }}>
+                郵便番号
+              </span>
+              <span>{resolvedAddress.postcode}</span>
+            </div>
+          )}
+          {resolvedAddress?.line && (
+            <div style={{ display: "flex", gap: 8 }}>
+              <span style={{ color: "var(--text-light)", minWidth: "5em" }}>
+                住所
+              </span>
+              <span>{resolvedAddress.line}</span>
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <span style={{ color: "var(--text-light)", minWidth: "5em" }}>
+              緯度経度
+            </span>
+            <span style={{ fontFamily: "monospace", color: "var(--text-light)" }}>
               {center.lat.toFixed(6)}, {center.lng.toFixed(6)}
             </span>
           </div>
-          {resolvedAddress && (
-            <div style={{ color: "var(--text-light)", marginTop: 4 }}>
-              {resolvedAddress}
-            </div>
-          )}
         </div>
       )}
 
