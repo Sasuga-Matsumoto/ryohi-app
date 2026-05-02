@@ -12,6 +12,7 @@ const VALID_STATUSES = [
   "no_permission",
   "fg_only",
   "no_setting",
+  "not_recording",
   "ready",
 ] as const;
 

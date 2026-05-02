@@ -39,6 +39,7 @@ export default async function AccountDetailPage({
     | "no_permission"
     | "fg_only"
     | "no_setting"
+    | "not_recording"
     | "ready"
     | null = null;
   let lastHealthCheckAt: string | null = null;
@@ -92,7 +93,9 @@ export default async function AccountDetailPage({
       ? { label: "端末未許可", tone: "danger" }
       : lastStatus === "no_permission" || lastStatus === "fg_only"
         ? { label: "アプリ未許可", tone: "warning" }
-        : { label: "許可済", tone: "success" };
+        : lastStatus === "not_recording"
+          ? { label: "記録停止中", tone: "warning" }
+          : { label: "許可済", tone: "success" };
 
   const toneColor = (
     t: "success" | "warning" | "danger" | "muted",

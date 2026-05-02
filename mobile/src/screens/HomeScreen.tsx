@@ -29,6 +29,7 @@ import {
 } from "../lib/location";
 import { pendingCount, fetchTodayTracks } from "../lib/queue";
 import { defineTasks } from "../lib/tasks";
+import { TASK_GEOFENCE } from "../lib/config";
 import {
   reportMobileStatus,
   fetchTodaySummaryFromServer,
@@ -51,6 +52,7 @@ type Status =
   | "no_permission"
   | "fg_only"
   | "no_setting"
+  | "not_recording"
   | "ready";
 
 export default function HomeScreen({ session }: { session: any }) {
@@ -95,14 +97,28 @@ export default function HomeScreen({ session }: { session: any }) {
       return;
     }
 
+    // 設定変更時、または geofence が走っていないとき（OS による破棄・初回起動など）
+    // は再登録を試みる
     const cached = await loadLastRegisteredSetting();
-    if (hasSettingChanged(s, cached)) {
+    let geofenceRunning = await Location.hasStartedGeofencingAsync(
+      TASK_GEOFENCE,
+    );
+    if (hasSettingChanged(s, cached) || !geofenceRunning) {
       try {
         await registerGeofence(s);
         await registerFlushTask();
+        geofenceRunning = await Location.hasStartedGeofencingAsync(
+          TASK_GEOFENCE,
+        );
       } catch (e) {
         console.warn("[home] auto-register failed", e);
       }
+    }
+    if (!geofenceRunning) {
+      // 権限・設定は揃っているのに geofence が起動していない
+      // → ユーザーに再開を促す
+      setStatus("not_recording");
+      return;
     }
 
     const p = await pendingCount();
@@ -245,6 +261,30 @@ export default function HomeScreen({ session }: { session: any }) {
     }
   };
 
+  const handleResumeRecording = async () => {
+    if (navBusyRef.current) return;
+    navBusyRef.current = true;
+    try {
+      if (!setting) return;
+      try {
+        await registerGeofence(setting);
+        await registerFlushTask();
+      } catch (e) {
+        console.warn("[home] manual register failed", e);
+        Alert.alert(
+          "記録の再開に失敗しました",
+          "アプリを再起動してから、もう一度お試しください。",
+        );
+        return;
+      }
+      await init();
+    } finally {
+      setTimeout(() => {
+        navBusyRef.current = false;
+      }, 500);
+    }
+  };
+
   const handleOpenWebDashboard = async () => {
     if (navBusyRef.current) return;
     navBusyRef.current = true;
@@ -278,6 +318,7 @@ export default function HomeScreen({ session }: { session: any }) {
       "no_permission",
       "fg_only",
       "no_setting",
+      "not_recording",
     ];
     if (!warnings.includes(status)) {
       popupShownForRef.current = null;
@@ -287,7 +328,7 @@ export default function HomeScreen({ session }: { session: any }) {
     popupShownForRef.current = status;
 
     const popups: Record<
-      "services_off" | "no_permission" | "fg_only" | "no_setting",
+      "services_off" | "no_permission" | "fg_only" | "no_setting" | "not_recording",
       { title: string; message: string; buttonText: string; onPress: () => void }
     > = {
       services_off: {
@@ -319,6 +360,13 @@ export default function HomeScreen({ session }: { session: any }) {
           "ホーム画面の「自宅エリアを設定」「勤務地エリアを設定」ボタンから地図で指定してください（半径100m）。",
         buttonText: "OK",
         onPress: () => {},
+      },
+      not_recording: {
+        title: "記録が停止しています",
+        message:
+          "バックグラウンドの記録タスクが動いていません。記録を再開してください。",
+        buttonText: "記録を再開する",
+        onPress: handleResumeRecording,
       },
     };
 
@@ -421,6 +469,14 @@ export default function HomeScreen({ session }: { session: any }) {
             body="「使用中のみ」では出張記録ができません。下のボタンを押すと位置情報の権限画面に移動するので「常に許可」を選んでください。"
             buttonText="権限画面を開く"
             onPress={handleOpenAppPermissionSettings}
+          />
+        )}
+        {status === "not_recording" && (
+          <WarningCard
+            title="記録が停止しています"
+            body="権限・自宅・勤務地は揃っていますが、バックグラウンドの記録タスクが動いていません。下のボタンを押して再開してください。"
+            buttonText="記録を再開する"
+            onPress={handleResumeRecording}
           />
         )}
         {status === "no_setting" && (

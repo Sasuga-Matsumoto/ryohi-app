@@ -10,6 +10,7 @@ export type MobileStatus =
   | "no_permission"
   | "fg_only"
   | "no_setting"
+  | "not_recording"
   | "ready";
 
 const LAST_STATUS_KEY = "last_mobile_status";
@@ -31,6 +32,7 @@ export async function loadLastStatus(): Promise<MobileStatus | null> {
       v === "no_permission" ||
       v === "fg_only" ||
       v === "no_setting" ||
+      v === "not_recording" ||
       v === "ready"
     ) {
       return v;

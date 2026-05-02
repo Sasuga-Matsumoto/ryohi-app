@@ -69,7 +69,9 @@ export default async function DashboardPage() {
       | null;
     mobileLaunched = !!h?.last_health_check_at;
     permissionGranted =
-      h?.last_mobile_status === "ready" || h?.last_mobile_status === "no_setting";
+      h?.last_mobile_status === "ready" ||
+      h?.last_mobile_status === "no_setting" ||
+      h?.last_mobile_status === "not_recording";
   } catch {
     // migration 0004 未適用 → 全部 false 扱い
   }
