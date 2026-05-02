@@ -35,6 +35,7 @@ export async function PUT(request: NextRequest) {
     "include_holidays",
     "include_weekends",
     "default_purpose",
+    "purpose_presets",
   ] as const;
 
   const updates: Record<string, unknown> = {};

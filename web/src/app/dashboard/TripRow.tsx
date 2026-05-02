@@ -10,6 +10,8 @@ import {
   ChevronRightIcon,
   TrashIcon,
 } from "@/components/Icon";
+import PurposeInput from "@/components/PurposeInput";
+import { usePurposeSuggestions } from "@/components/usePurposeSuggestions";
 
 export type TripRowData = {
   id: string;
@@ -26,6 +28,7 @@ export type TripRowData = {
 
 export default function TripRow({ trip }: { trip: TripRowData }) {
   const router = useRouter();
+  const { presets, history } = usePurposeSuggestions();
   const [editing, setEditing] = useState(false);
   const [purposeDraft, setPurposeDraft] = useState(trip.purpose);
   const [excludeMode, setExcludeMode] = useState(false);
@@ -107,17 +110,18 @@ export default function TripRow({ trip }: { trip: TripRowData }) {
         <td>
           {editing ? (
             <div style={{ display: "flex", gap: "var(--space-2)" }}>
-              <input
-                type="text"
+              <PurposeInput
+                id={`purpose-${trip.id}`}
                 value={purposeDraft}
-                onChange={(e) => setPurposeDraft(e.target.value)}
+                onChange={setPurposeDraft}
+                customPresets={presets}
+                history={history}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") savePurpose();
                   if (e.key === "Escape") cancelPurposeEdit();
                 }}
                 autoFocus
                 disabled={busy}
-                className="input"
                 style={{ minHeight: 32, fontSize: "var(--text-sm)" }}
               />
               <button

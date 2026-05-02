@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import PurposeInput from "@/components/PurposeInput";
+import { usePurposeSuggestions } from "@/components/usePurposeSuggestions";
 
 export default function TripDetailActions({
   tripId,
@@ -15,6 +17,7 @@ export default function TripDetailActions({
   excludedReason: string | null;
 }) {
   const router = useRouter();
+  const { presets, history } = usePurposeSuggestions();
   const [editing, setEditing] = useState(false);
   const [purposeDraft, setPurposeDraft] = useState(initialPurpose);
   const [excludeMode, setExcludeMode] = useState(false);
@@ -78,22 +81,25 @@ export default function TripDetailActions({
         </span>
         {editing ? (
           <>
-            <input
-              type="text"
-              value={purposeDraft}
-              onChange={(e) => setPurposeDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") savePurpose();
-                if (e.key === "Escape") {
-                  setPurposeDraft(initialPurpose);
-                  setEditing(false);
-                }
-              }}
-              autoFocus
-              disabled={busy}
-              className="input"
-              style={{ flex: 1, minHeight: 32, padding: "4px 8px" }}
-            />
+            <div style={{ flex: 1 }}>
+              <PurposeInput
+                id="purpose-detail"
+                value={purposeDraft}
+                onChange={setPurposeDraft}
+                customPresets={presets}
+                history={history}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") savePurpose();
+                  if (e.key === "Escape") {
+                    setPurposeDraft(initialPurpose);
+                    setEditing(false);
+                  }
+                }}
+                autoFocus
+                disabled={busy}
+                style={{ minHeight: 32, padding: "4px 8px" }}
+              />
+            </div>
             <button
               type="button"
               onClick={savePurpose}

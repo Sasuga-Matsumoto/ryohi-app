@@ -3,6 +3,9 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import LocationPicker from "@/components/LocationPicker";
+import PurposeInput, {
+  DEFAULT_PURPOSE_PRESETS,
+} from "@/components/PurposeInput";
 import {
   HomeIcon,
   BuildingIcon,
@@ -11,6 +14,8 @@ import {
   CalendarIcon,
   FileTextIcon,
   CheckIcon,
+  PlusIcon,
+  XIcon,
 } from "@/components/Icon";
 
 type Setting = {
@@ -29,6 +34,7 @@ type Setting = {
   include_holidays: boolean;
   include_weekends: boolean;
   default_purpose: string;
+  purpose_presets: string[];
 };
 
 const DEFAULTS: Setting = {
@@ -46,7 +52,8 @@ const DEFAULTS: Setting = {
   business_hours_end: "18:00",
   include_holidays: true,
   include_weekends: true,
-  default_purpose: "客先訪問",
+  default_purpose: "顧客訪問",
+  purpose_presets: [],
 };
 
 export default function SettingsForm({ initial }: { initial: Setting | null }) {
@@ -416,26 +423,46 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
             </div>
           </section>
 
-          {/* デフォルト目的 */}
+          {/* デフォルト目的 + プリセット管理 */}
           <section className="card" aria-labelledby="sec-purpose">
             <h3
               id="sec-purpose"
               className="section-title"
               style={{ display: "flex", alignItems: "center", gap: 8 }}
             >
-              <FileTextIcon size={18} /> デフォルト目的
+              <FileTextIcon size={18} /> 出張目的
             </h3>
             <p className="helper" style={{ marginBottom: "var(--space-3)" }}>
-              自動判定された出張の「目的」列の初期値（個別編集可）
+              自動判定された出張の「目的」初期値とプリセットを管理
             </p>
-            <input
-              type="text"
+
+            <label htmlFor="default_purpose" className="label">
+              デフォルト目的
+            </label>
+            <PurposeInput
+              id="default_purpose"
               value={s.default_purpose}
-              onChange={(e) => update("default_purpose", e.target.value)}
-              className="input"
-              placeholder="客先訪問"
+              onChange={(v) => update("default_purpose", v)}
+              customPresets={s.purpose_presets}
+              placeholder="顧客訪問"
               aria-label="デフォルト目的"
             />
+
+            <div style={{ marginTop: "var(--space-5)" }}>
+              <p
+                className="label"
+                style={{ marginBottom: "var(--space-1)" }}
+              >
+                プリセット
+              </p>
+              <p className="helper" style={{ marginBottom: "var(--space-3)" }}>
+                目的入力時のドロップダウン候補として使われます。標準（{DEFAULT_PURPOSE_PRESETS.join(" / ")}）に追加できます。
+              </p>
+              <PresetEditor
+                presets={s.purpose_presets}
+                onChange={(v) => update("purpose_presets", v)}
+              />
+            </div>
           </section>
         </div>
       </form>
@@ -448,5 +475,136 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
         </div>
       )}
     </>
+  );
+}
+
+function PresetEditor({
+  presets,
+  onChange,
+}: {
+  presets: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+
+  const add = () => {
+    const t = draft.trim();
+    if (!t) return;
+    if (
+      DEFAULT_PURPOSE_PRESETS.some((p) => p === t) ||
+      presets.includes(t)
+    ) {
+      setDraft("");
+      return;
+    }
+    onChange([...presets, t]);
+    setDraft("");
+  };
+
+  const remove = (i: number) => {
+    onChange(presets.filter((_, idx) => idx !== i));
+  };
+
+  return (
+    <div className="stack-sm">
+      {/* 追加フォーム */}
+      <div style={{ display: "flex", gap: "var(--space-2)" }}>
+        <input
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            }
+          }}
+          className="input"
+          placeholder="例: 業界カンファレンス"
+          style={{ flex: 1 }}
+          aria-label="プリセットを追加"
+        />
+        <button
+          type="button"
+          onClick={add}
+          className="btn btn-secondary"
+          disabled={!draft.trim()}
+        >
+          <PlusIcon size={14} />
+          追加
+        </button>
+      </div>
+
+      {/* 標準プリセット（削除不可） */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "var(--space-2)",
+          marginTop: "var(--space-1)",
+        }}
+      >
+        {DEFAULT_PURPOSE_PRESETS.map((p) => (
+          <span
+            key={p}
+            className="badge"
+            style={{
+              background: "var(--surface-muted)",
+              color: "var(--text-muted)",
+              border: "1px solid var(--border)",
+              fontWeight: 500,
+              padding: "4px 10px",
+            }}
+            title="標準プリセット（削除不可）"
+          >
+            {p}
+          </span>
+        ))}
+
+        {/* ユーザー追加 */}
+        {presets.map((p, i) => (
+          <span
+            key={i}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              padding: "4px 6px 4px 10px",
+              background: "var(--info-bg)",
+              color: "var(--bright-blue)",
+              borderRadius: "var(--radius-pill)",
+              border: "1px solid var(--light-blue)",
+              fontSize: "var(--text-xs)",
+              fontWeight: 600,
+            }}
+          >
+            {p}
+            <button
+              type="button"
+              onClick={() => remove(i)}
+              aria-label={`${p} を削除`}
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: "50%",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "rgba(51,102,255,0.1)",
+                color: "var(--bright-blue)",
+              }}
+            >
+              <XIcon size={10} />
+            </button>
+          </span>
+        ))}
+
+        {presets.length === 0 && (
+          <span className="text-xs text-muted" style={{ alignSelf: "center" }}>
+            （カスタムプリセット未追加）
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
