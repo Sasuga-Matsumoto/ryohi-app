@@ -68,6 +68,10 @@ export default function MapView({
         borderRadius: 8,
         overflow: "hidden",
         border: "1px solid #E5E7EB",
+        // Leaflet 内部の z-index 200-700 がページの header / toolbar より前面に出るのを防ぐ
+        position: "relative",
+        zIndex: 0,
+        isolation: "isolate",
       }}
     >
       <MapContainer

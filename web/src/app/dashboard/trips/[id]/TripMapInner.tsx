@@ -228,6 +228,10 @@ export default function TripMapInner({ work, home, visitedStays, tracks }: Props
         borderRadius: 8,
         overflow: "hidden",
         border: "1px solid #E5E7EB",
+        // Leaflet 内部 z-index がヘッダー / toolbar を上書きしないよう stacking context を分離
+        position: "relative",
+        zIndex: 0,
+        isolation: "isolate",
       }}
     >
       <MapContainer
