@@ -326,7 +326,7 @@ export default function TripMapInner({ work, home, visitedStays, tracks }: Props
           >
             <Popup>
               <div style={{ fontSize: 13 }}>
-                <strong>滞在ノード</strong>
+                <strong>30分以上の滞在</strong>
                 <br />
                 {formatHHMM(s.ts_start)} - {formatHHMM(s.ts_end)}
                 <br />

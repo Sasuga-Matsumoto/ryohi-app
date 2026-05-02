@@ -266,7 +266,7 @@ export default async function TripDetailPage({
           </span>
           <span className="map-legend-item" role="listitem">
             <span className="map-legend-swatch map-legend-swatch-stay" aria-hidden="true" />
-            滞在ノード
+            30分以上の滞在
           </span>
         </div>
       </section>
@@ -274,10 +274,10 @@ export default async function TripDetailPage({
       {/* 滞在ノード */}
       <section className="card" style={{ marginBottom: "var(--space-5)" }}>
         <h2 className="section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <MapPinIcon size={18} /> 滞在ノード（30分以上同地点）
+          <MapPinIcon size={18} /> 30分以上の滞在
         </h2>
         {visitedStays.length === 0 ? (
-          <p className="text-light">該当する滞在ノードがありません</p>
+          <p className="text-light">該当する 30 分以上の滞在がありません</p>
         ) : (
           <ul style={{ listStyle: "none", padding: 0 }}>
             {visitedStays.map((s, i) => {

@@ -505,7 +505,7 @@ function TodayRecordCard({
 
       <View style={[styles.todayRow, { borderBottomWidth: 0 }]}>
         <Feather name="map-pin" color={colors.textMuted} size={14} />
-        <Text style={styles.todayLabel}>滞在ノード</Text>
+        <Text style={styles.todayLabel}>30分以上の滞在</Text>
         <Text style={styles.todayValue}>{stayCount} 件</Text>
       </View>
     </View>

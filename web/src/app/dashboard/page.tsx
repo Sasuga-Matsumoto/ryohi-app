@@ -320,7 +320,7 @@ export default async function DashboardPage() {
             <h2 className="section-title" style={{ marginBottom: 0 }}>開発コントロール</h2>
           </div>
           <p className="text-sm text-muted" style={{ marginBottom: "var(--space-4)", lineHeight: 1.7 }}>
-            実機 GPS の代わりにモック滞在ノードを投入して、判定を試せます。
+            実機 GPS の代わりにモックの 30 分以上の滞在を投入して、判定を試せます。
             （モバイルアプリ実装前の動作確認用）
           </p>
           <DevControls
