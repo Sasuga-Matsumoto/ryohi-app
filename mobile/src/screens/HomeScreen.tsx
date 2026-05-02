@@ -261,7 +261,7 @@ export default function HomeScreen({ session }: { session: any }) {
       fg_only: {
         title: "「常に許可」が必要です",
         message:
-          "「使用中のみ」では出張ログを記録できません。権限画面で「常に許可」を選んでください。",
+          "「使用中のみ」では出張記録ができません。権限画面で「常に許可」を選んでください。",
         buttonText: "権限画面を開く",
         onPress: handleOpenAppPermissionSettings,
       },
@@ -305,7 +305,7 @@ export default function HomeScreen({ session }: { session: any }) {
             <View style={styles.brandIcon}>
               <Feather name="map-pin" color={colors.white} size={18} />
             </View>
-            <Text style={styles.brand}>PLEX 出張ログ</Text>
+            <Text style={styles.brand}>PLEX Log</Text>
           </View>
           <Text style={styles.email}>{session?.user?.email ?? ""}</Text>
         </View>
@@ -339,7 +339,7 @@ export default function HomeScreen({ session }: { session: any }) {
         {status === "fg_only" && (
           <WarningCard
             title="「常に許可」が必要です"
-            body="「使用中のみ」では出張ログを記録できません。下のボタンを押すと位置情報の権限画面に移動するので「常に許可」を選んでください。"
+            body="「使用中のみ」では出張記録ができません。下のボタンを押すと位置情報の権限画面に移動するので「常に許可」を選んでください。"
             buttonText="権限画面を開く"
             onPress={handleOpenAppPermissionSettings}
           />

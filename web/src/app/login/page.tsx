@@ -59,7 +59,7 @@ export default function LoginPage() {
               fontSize: "var(--text-xl)",
             }}
           >
-            PLEX 出張ログ
+            PLEX Log
           </h1>
           <p
             className="text-sm text-muted"

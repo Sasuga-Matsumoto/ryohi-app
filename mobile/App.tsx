@@ -64,7 +64,7 @@ export default function App() {
       <SafeAreaProvider>
         <View style={styles.loading}>
           <Text style={styles.loadingBrand}>PLEX</Text>
-          <Text style={styles.loadingTagline}>出張ログ</Text>
+          <Text style={styles.loadingTagline}>Log</Text>
           <ActivityIndicator
             size="small"
             color={colors.primary}
