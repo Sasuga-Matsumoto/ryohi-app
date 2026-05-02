@@ -84,7 +84,17 @@ export default function MapView({
         <Recenter center={center} />
         {center && (
           <>
-            <Marker position={[center.lat, center.lng]} />
+            <Marker
+              position={[center.lat, center.lng]}
+              draggable={true}
+              eventHandlers={{
+                dragend: (e) => {
+                  const m = e.target as L.Marker;
+                  const ll = m.getLatLng();
+                  onPickLocation(ll.lat, ll.lng);
+                },
+              }}
+            />
             <Circle
               center={[center.lat, center.lng]}
               radius={radiusM}
