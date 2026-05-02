@@ -34,10 +34,13 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // 未ログインなら /login 以外は /login へリダイレクト
+  // API 系（特に mobile からの Bearer 認証）はリダイレクトせず、
+  // 各 route handler 側で 401 を返させる
   const path = request.nextUrl.pathname;
   const isPublic =
     path.startsWith("/login") ||
     path.startsWith("/auth") ||
+    path.startsWith("/api/") ||
     path === "/" ||
     path.startsWith("/_next");
 

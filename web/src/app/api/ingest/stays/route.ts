@@ -5,12 +5,12 @@
  * body: { stays: [{ ts_start: ISO, ts_end: ISO, lat: number, lng: number, accuracy?: number }] }
  */
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getApiClient } from "@/lib/supabase/api-auth";
 
 const MAX_STAYS = 1000;
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await getApiClient(request);
   const {
     data: { user },
   } = await supabase.auth.getUser();

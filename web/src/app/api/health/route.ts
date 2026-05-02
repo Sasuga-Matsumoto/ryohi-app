@@ -5,7 +5,7 @@
  * Admin のアカウント詳細画面で「位置情報」KPI として表示される。
  */
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getApiClient } from "@/lib/supabase/api-auth";
 
 const VALID_STATUSES = [
   "services_off",
@@ -18,7 +18,7 @@ const VALID_STATUSES = [
 type MobileStatus = (typeof VALID_STATUSES)[number];
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await getApiClient(request);
   const {
     data: { user },
   } = await supabase.auth.getUser();

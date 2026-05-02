@@ -9,12 +9,12 @@
  * body: { tracks: [{ ts: ISO, lat: number, lng: number, accuracy?: number }] }
  */
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getApiClient } from "@/lib/supabase/api-auth";
 
 const MAX_TRACKS = 5000;
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const supabase = await getApiClient(request);
   const {
     data: { user },
   } = await supabase.auth.getUser();
