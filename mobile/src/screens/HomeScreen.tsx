@@ -26,10 +26,11 @@ import {
   tearDownTracking,
   type AccountSetting,
 } from "../lib/location";
-import { pendingCount } from "../lib/queue";
+import { pendingCount, fetchTodayTracks } from "../lib/queue";
 import { defineTasks } from "../lib/tasks";
 import { reportMobileStatus } from "../lib/health";
 import { getTodayStats, type TodayStats } from "../lib/todayStats";
+import RouteMap from "../components/RouteMap";
 import { colors, spacing, radius, typography, shadows, TOUCH_MIN } from "../lib/theme";
 
 const WEB_BASE_URL = "https://ryohi-app.vercel.app";
@@ -48,6 +49,9 @@ export default function HomeScreen({ session }: { session: any }) {
   const [, setSetting] = useState<AccountSetting | null>(null);
   const [pending, setPending] = useState({ tracks: 0, stays: 0 });
   const [todayStats, setTodayStats] = useState<TodayStats | null>(null);
+  const [todayTracks, setTodayTracks] = useState<
+    { lat: number; lng: number }[]
+  >([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const init = useCallback(async () => {
@@ -90,6 +94,12 @@ export default function HomeScreen({ session }: { session: any }) {
     setPending(p);
     const ts = await getTodayStats();
     setTodayStats(ts);
+    try {
+      const tt = await fetchTodayTracks();
+      setTodayTracks(tt.map((r) => ({ lat: r.lat, lng: r.lng })));
+    } catch (e) {
+      console.warn("[home] fetchTodayTracks failed", e);
+    }
     setStatus("ready");
   }, []);
 
@@ -367,6 +377,11 @@ export default function HomeScreen({ session }: { session: any }) {
                 lastReceivedAt={todayStats.lastReceivedAt}
               />
             )}
+            {/* 今日の経路マップ */}
+            <View style={styles.routeMapWrap}>
+              <Text style={styles.routeMapTitle}>今日の経路</Text>
+              <RouteMap tracks={todayTracks} height={240} />
+            </View>
             <View style={styles.kpiRow}>
               <View style={styles.kpiCard}>
                 <View style={styles.kpiHead}>
@@ -675,6 +690,16 @@ const styles = StyleSheet.create({
   warningButtonText: {
     color: colors.white,
     ...typography.bodyStrong,
+  },
+
+  // 今日の経路マップ
+  routeMapWrap: {
+    marginBottom: spacing[3],
+  },
+  routeMapTitle: {
+    ...typography.bodyStrong,
+    color: colors.text,
+    marginBottom: spacing[2],
   },
 
   // 今日の記録
