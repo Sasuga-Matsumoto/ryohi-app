@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import DevControls from "./DevControls";
 import TripRow from "./TripRow";
 import TripCard from "./TripCard";
-import { AlertTriangleIcon, SettingsIcon, RefreshIcon } from "@/components/Icon";
+import OnboardingChecklist from "./OnboardingChecklist";
+import { SettingsIcon, RefreshIcon } from "@/components/Icon";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -54,6 +55,25 @@ export default async function DashboardPage() {
     .maybeSingle();
   const onboarded = setting?.work_lat != null && setting?.home_lat != null;
 
+  // ヘルスチェック由来のオンボーディング状態（migration 0004 適用済み環境のみ）
+  let mobileLaunched = false;
+  let permissionGranted = false;
+  try {
+    const { data: health } = await supabase
+      .from("accounts")
+      .select("last_mobile_status, last_health_check_at")
+      .eq("id", user.id)
+      .maybeSingle();
+    const h = health as
+      | { last_mobile_status: string | null; last_health_check_at: string | null }
+      | null;
+    mobileLaunched = !!h?.last_health_check_at;
+    permissionGranted =
+      h?.last_mobile_status === "ready" || h?.last_mobile_status === "no_setting";
+  } catch {
+    // migration 0004 未適用 → 全部 false 扱い
+  }
+
   // 当月 Trip
   const monthStart = new Date();
   monthStart.setDate(1);
@@ -89,22 +109,14 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      {/* 設定未完了アラート */}
-      {!onboarded && (
-        <div className="alert alert-warning" style={{ marginBottom: "var(--space-6)" }}>
-          <AlertTriangleIcon size={20} style={{ flexShrink: 0, marginTop: 2 }} />
-          <div>
-            <strong>初期設定が未完了です</strong>
-            <p style={{ marginTop: 4, lineHeight: 1.7 }}>
-              自動判定を始めるには、
-              <a href="/dashboard/settings" style={{ fontWeight: 600 }}>
-                設定ページ
-              </a>
-              で <strong>自宅と勤務地</strong>を登録してください。
-            </p>
-          </div>
-        </div>
-      )}
+      {/* オンボーディング進捗チェックリスト（全部完了したら自動的に消える） */}
+      <OnboardingChecklist
+        homeSet={setting?.home_lat != null}
+        workSet={setting?.work_lat != null}
+        mobileLaunched={mobileLaunched}
+        permissionGranted={permissionGranted}
+        installUrl="https://ryohi-app.vercel.app/help/install"
+      />
 
       {/* サマリ KPI */}
       <section className="grid grid-3 kpi-grid" style={{ marginBottom: "var(--space-6)" }}>

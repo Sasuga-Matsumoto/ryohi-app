@@ -10,6 +10,7 @@ import {
   deleteTracksByIds,
   deleteStaysByIds,
 } from "./queue";
+import { loadLastStatus, reportMobileStatus } from "./health";
 
 const MAX_BATCH = 1000;
 
@@ -61,6 +62,12 @@ export async function flushQueue(): Promise<{
 }> {
   let sentTracks = 0;
   let sentStays = 0;
+
+  // 最終 status を Web に再送信（Admin の「位置情報」KPI を新鮮に保つため）
+  const lastStatus = await loadLastStatus();
+  if (lastStatus) {
+    await reportMobileStatus(lastStatus);
+  }
 
   // 1. stays（重要なので先に送信）
   const stays = await fetchPendingStays(MAX_BATCH);
