@@ -37,12 +37,13 @@ import {
 import LocationPickerMap, {
   type LatLng,
 } from "../components/LocationPickerMap";
+import SettingsScreen from "./SettingsScreen";
 import { getTodayStats, type TodayStats } from "../lib/todayStats";
 import RouteMap from "../components/RouteMap";
 import { colors, spacing, radius, typography, shadows, TOUCH_MIN } from "../lib/theme";
 
 const WEB_BASE_URL = "https://ryohi-app.vercel.app";
-const WEB_SETTINGS_PATH = "/dashboard/settings";
+const WEB_DASHBOARD_PATH = "/dashboard";
 
 type Status =
   | "loading"
@@ -65,6 +66,8 @@ export default function HomeScreen({ session }: { session: any }) {
   const [pickerKind, setPickerKind] = useState<"home" | "work" | null>(null);
   const [pickerSelection, setPickerSelection] = useState<LatLng | null>(null);
   const [pickerSaving, setPickerSaving] = useState(false);
+  // 設定画面 Modal
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const init = useCallback(async () => {
     defineTasks();
@@ -230,18 +233,18 @@ export default function HomeScreen({ session }: { session: any }) {
     }
   };
 
-  const handleOpenWebSettings = async () => {
+  const handleOpenWebDashboard = async () => {
     if (navBusyRef.current) return;
     navBusyRef.current = true;
     try {
       const { data: { session: cur } } = await supabase.auth.getSession();
-      const fallbackUrl = `${WEB_BASE_URL}${WEB_SETTINGS_PATH}`;
+      const fallbackUrl = `${WEB_BASE_URL}${WEB_DASHBOARD_PATH}`;
       const url =
         cur?.access_token && cur?.refresh_token
           ? `${WEB_BASE_URL}/auth/from-mobile` +
             `#access_token=${encodeURIComponent(cur.access_token)}` +
             `&refresh_token=${encodeURIComponent(cur.refresh_token)}` +
-            `&next=${encodeURIComponent(WEB_SETTINGS_PATH)}`
+            `&next=${encodeURIComponent(WEB_DASHBOARD_PATH)}`
           : fallbackUrl;
       try {
         await Linking.openURL(url);
@@ -301,9 +304,9 @@ export default function HomeScreen({ session }: { session: any }) {
       no_setting: {
         title: "自宅・勤務地の設定が必要です",
         message:
-          "Web の設定画面で自宅と勤務地のエリアを地図上で指定してください（半径100m）。",
-        buttonText: "Web の設定画面を開く",
-        onPress: handleOpenWebSettings,
+          "ホーム画面の「自宅エリアを設定」「勤務地エリアを設定」ボタンから地図で指定してください（半径100m）。",
+        buttonText: "OK",
+        onPress: () => {},
       },
     };
 
@@ -440,7 +443,7 @@ export default function HomeScreen({ session }: { session: any }) {
               <Text style={styles.warningButtonText}>勤務地エリアを設定</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={handleOpenWebSettings}
+              onPress={handleOpenWebDashboard}
               style={[
                 styles.warningButton,
                 { backgroundColor: "transparent" },
@@ -453,23 +456,56 @@ export default function HomeScreen({ session }: { session: any }) {
                   { color: colors.warningText },
                 ]}
               >
-                Web の設定画面を開く
+                Web でダッシュボードを開く
               </Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Web 設定画面ショートカット（ready 状態時に上部表示） */}
+        {/* オンボーディングチェックリスト（未完了時のみ）*/}
+        {status === "ready" && (
+          <OnboardingChecklist
+            homeSet={setting?.home_lat != null}
+            workSet={setting?.work_lat != null}
+            permissionGranted={true /* status='ready' = 全許可済 */}
+            onSetHome={() => {
+              setPickerSelection(null);
+              setPickerKind("home");
+            }}
+            onSetWork={() => {
+              setPickerSelection(null);
+              setPickerKind("work");
+            }}
+          />
+        )}
+
+        {/* 設定 / Web ダッシュボード ショートカット */}
         {status === "ready" && (
           <View style={[styles.actionsCard, { marginBottom: spacing[3] }]}>
             <TouchableOpacity
-              onPress={handleOpenWebSettings}
+              onPress={() => setSettingsOpen(true)}
               style={styles.actionRow}
               activeOpacity={0.6}
             >
               <View style={styles.actionRowInner}>
                 <Feather name="settings" color={colors.text} size={18} />
-                <Text style={styles.actionLabel}>Web の設定画面を開く</Text>
+                <Text style={styles.actionLabel}>設定</Text>
+              </View>
+              <Feather
+                name="chevron-right"
+                color={colors.textDisabled}
+                size={18}
+              />
+            </TouchableOpacity>
+            <View style={styles.actionDivider} />
+            <TouchableOpacity
+              onPress={handleOpenWebDashboard}
+              style={styles.actionRow}
+              activeOpacity={0.6}
+            >
+              <View style={styles.actionRowInner}>
+                <Feather name="external-link" color={colors.text} size={18} />
+                <Text style={styles.actionLabel}>Web でダッシュボードを開く</Text>
               </View>
               <Feather
                 name="chevron-right"
@@ -582,6 +618,21 @@ export default function HomeScreen({ session }: { session: any }) {
           </View>
         </SafeAreaView>
       </Modal>
+
+      {/* 設定画面 Modal */}
+      <Modal
+        visible={settingsOpen}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setSettingsOpen(false)}
+      >
+        <SettingsScreen
+          onClose={async () => {
+            setSettingsOpen(false);
+            await init();
+          }}
+        />
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -589,6 +640,88 @@ export default function HomeScreen({ session }: { session: any }) {
 // ─────────────────────────────────────
 // サブコンポーネント
 // ─────────────────────────────────────
+
+function OnboardingChecklist({
+  homeSet,
+  workSet,
+  permissionGranted,
+  onSetHome,
+  onSetWork,
+}: {
+  homeSet: boolean;
+  workSet: boolean;
+  permissionGranted: boolean;
+  onSetHome: () => void;
+  onSetWork: () => void;
+}) {
+  const items = [
+    {
+      label: "「常に許可」を設定",
+      done: permissionGranted,
+      onPress: undefined,
+    },
+    { label: "自宅エリアを設定", done: homeSet, onPress: onSetHome },
+    { label: "勤務地エリアを設定", done: workSet, onPress: onSetWork },
+  ];
+  const completed = items.filter((i) => i.done).length;
+  const total = items.length;
+  if (completed === total) return null;
+  return (
+    <View style={styles.onbCard}>
+      <View style={styles.onbHead}>
+        <Text style={styles.onbTitle}>セットアップ進捗</Text>
+        <Text style={styles.onbCounter}>
+          {completed} <Text style={styles.onbCounterTotal}>/ {total}</Text>
+        </Text>
+      </View>
+      <View style={styles.onbBarTrack}>
+        <View
+          style={[
+            styles.onbBarFill,
+            { width: `${(completed / total) * 100}%` },
+          ]}
+        />
+      </View>
+      {items.map((it, i) => (
+        <TouchableOpacity
+          key={i}
+          onPress={it.onPress}
+          disabled={!it.onPress || it.done}
+          style={styles.onbItem}
+          activeOpacity={0.7}
+        >
+          <View
+            style={[
+              styles.onbBullet,
+              it.done && {
+                backgroundColor: colors.success,
+                borderColor: colors.success,
+              },
+            ]}
+          >
+            {it.done && (
+              <Feather name="check" color={colors.white} size={12} />
+            )}
+          </View>
+          <Text
+            style={[
+              styles.onbItemLabel,
+              it.done && {
+                color: colors.textMuted,
+                textDecorationLine: "line-through",
+              },
+            ]}
+          >
+            {it.label}
+          </Text>
+          {it.onPress && !it.done && (
+            <Feather name="chevron-right" color={colors.textDisabled} size={16} />
+          )}
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
 
 function StatusHero({ status }: { status: Status }) {
   if (status === "ready") {
@@ -843,6 +976,65 @@ const styles = StyleSheet.create({
   warningButtonText: {
     color: colors.white,
     ...typography.bodyStrong,
+  },
+
+  // オンボーディングチェックリスト
+  onbCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.primarySoft,
+    padding: spacing[4],
+    marginBottom: spacing[3],
+  },
+  onbHead: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    marginBottom: spacing[2],
+  },
+  onbTitle: { ...typography.bodyStrong, color: colors.brand },
+  onbCounter: {
+    ...typography.title,
+    color: colors.primary,
+    fontVariant: ["tabular-nums"],
+  },
+  onbCounterTotal: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontWeight: "500",
+  },
+  onbBarTrack: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.border,
+    overflow: "hidden",
+    marginBottom: spacing[3],
+  },
+  onbBarFill: {
+    height: "100%",
+    backgroundColor: colors.primary,
+  },
+  onbItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    paddingVertical: spacing[2],
+  },
+  onbBullet: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  onbItemLabel: {
+    flex: 1,
+    ...typography.body,
+    color: colors.text,
   },
 
   // 自宅・勤務地ピッカー Modal
