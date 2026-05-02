@@ -214,6 +214,14 @@ export const ArrowLeftIcon = ({ size = 16, ...rest }: IconProps) => (
   </svg>
 );
 
+export const SaveIcon = ({ size = 16, ...rest }: IconProps) => (
+  <svg {...baseProps(size)} {...rest}>
+    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+    <polyline points="17 21 17 13 7 13 7 21" />
+    <polyline points="7 3 7 8 15 8" />
+  </svg>
+);
+
 export const EyeIcon = ({ size = 16, ...rest }: IconProps) => (
   <svg {...baseProps(size)} {...rest}>
     <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />

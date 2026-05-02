@@ -16,6 +16,7 @@ import {
   CheckIcon,
   PlusIcon,
   XIcon,
+  SaveIcon,
 } from "@/components/Icon";
 
 type Setting = {
@@ -159,10 +160,11 @@ export default function SettingsForm({ initial }: { initial: Setting | null }) {
           </div>
           <button
             type="submit"
-            className="btn btn-primary"
+            className="btn btn-primary btn-lg"
             disabled={loading || !isDirty}
             aria-disabled={loading || !isDirty}
           >
+            <SaveIcon size={16} />
             {loading ? "保存中..." : "変更を保存"}
           </button>
         </div>
