@@ -80,14 +80,46 @@ export default async function DashboardPage() {
   monthStart.setHours(0, 0, 0, 0);
   const monthStartStr = monthStart.toISOString().slice(0, 10);
 
-  const { data: monthTrips } = await supabase
+  const { data: monthTripsCore } = await supabase
     .from("trips")
     .select(
-      "id, date, destination_label, visited_areas, depart_ts, return_ts, total_minutes, max_distance_km, purpose, is_excluded, excluded_reason, status, edit_source"
+      "id, date, destination_label, visited_areas, depart_ts, return_ts, total_minutes, max_distance_km, purpose, is_excluded, excluded_reason"
     )
     .eq("account_id", user.id)
     .gte("date", monthStartStr)
     .order("date", { ascending: false });
+
+  // edit_source / status は migration 0007 適用済み環境のみ存在。
+  // 未適用環境でもページが落ちないよう独立クエリ + try-catch で取得
+  const editMeta = new Map<
+    string,
+    { status?: string | null; edit_source?: string | null }
+  >();
+  try {
+    const ids = (monthTripsCore ?? []).map((t) => t.id);
+    if (ids.length > 0) {
+      const { data: extras } = await supabase
+        .from("trips")
+        .select("id, status, edit_source")
+        .in("id", ids);
+      for (const e of extras ?? []) {
+        editMeta.set(
+          (e as { id: string }).id,
+          {
+            status: (e as { status?: string | null }).status,
+            edit_source: (e as { edit_source?: string | null }).edit_source,
+          },
+        );
+      }
+    }
+  } catch {
+    // migration 0007 未適用 → 全 trip で edit_source / status が undefined 扱い
+  }
+  const monthTrips = (monthTripsCore ?? []).map((t) => ({
+    ...t,
+    status: editMeta.get(t.id)?.status ?? null,
+    edit_source: editMeta.get(t.id)?.edit_source ?? null,
+  }));
 
   const visibleTrips = monthTrips?.filter((t) => !t.is_excluded) ?? [];
   const totalHours = visibleTrips.reduce((sum, t) => sum + t.total_minutes / 60, 0);
